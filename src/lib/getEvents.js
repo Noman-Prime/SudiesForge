@@ -2,7 +2,7 @@ import axios from "axios";
 
 const getEvents = async () => {
     try {
-        const result = await axios.get("/api/events")
+        const result = await axios.get("/api/navigation")
         if (result.data.success) {
             console.log(result.data.event);
             return result.data.event
