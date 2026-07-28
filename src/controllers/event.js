@@ -8,11 +8,13 @@ export const createEvent = async (req) => {
         await connect()
         const body = await req.json();
         const Event = await event.create(body);
-        await syncNavigation()
+        const navigation = await syncNavigation();
         return NextResponse.json({
             success: true,
             message: "Event is created",
             Event,
+            navigationSynced: true,
+            navigationCount: navigation.length
         }, { status: 201 });
     } catch (error) {
         console.log(error);
@@ -27,6 +29,7 @@ export const getAllEvents = async () => {
     try {
         await connect()
         const Events = await event.find()
+        const navigation = await syncNavigation();
         if (!Events || Events.length === 0) {
             return NextResponse.json({
                 success: false,
