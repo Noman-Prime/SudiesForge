@@ -3,28 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import { useEvent } from "@/context/EventContext";
 
 const Navbar = () => {
     const [show, setShow] = useState(false);
-    const [event, setEvent] = useState([])
-    const closeMenu = () => setShow(false);
-    const fetchEvents = async () => {
-        try {
-            const result = await axios.get("/api/events")
-            if (result.data.success) {
-                console.log(result.data.event);
-                setEvent(result.data.event)
-            }
-        } catch (error) {
-            console.log(error.response?.data?.message);
-        }
-    }
+    const { event } = useEvent();
 
-    useEffect(() => {
-        fetchEvents()
-    }, [])
+    const closeMenu = () => {
+        setShow(false);
+    };
 
     return (
         <header className="sticky top-0 z-50 border-b border-slate-300 bg-slate-100 shadow-sm">
