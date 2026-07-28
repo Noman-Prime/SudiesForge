@@ -1,9 +1,10 @@
+
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
 
 export const GET = async () => {
     try {
-        const { env } = getCloudflareContext();
+        const { env } = getCloudflareContext()
         const events = await env.NAVIGATION_KV.get("events", "json");
 
         return NextResponse.json({
