@@ -1,12 +1,14 @@
 import connect from "@/lib/db";
+import syncNavigation from "@/lib/syncNavigation";
 import event from "@/models/event";
 import { NextResponse } from "next/server";
 
-export const createEvent = async(req) => {
+export const createEvent = async (req) => {
     try {
         await connect()
         const body = await req.json();
         const Event = await event.create(body);
+        await syncNavigation()
         return NextResponse.json({
             success: true,
             message: "Event is created",
@@ -21,9 +23,10 @@ export const createEvent = async(req) => {
     }
 };
 
-export const getAllEvents = async() => {
+export const getAllEvents = async () => {
     try {
         await connect()
+        const event = await syncNavigation();
         const Events = await event.find()
         if (!Events || Events.length === 0) {
             return NextResponse.json({
