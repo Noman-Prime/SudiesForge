@@ -26,7 +26,6 @@ export const createEvent = async (req) => {
 export const getAllEvents = async () => {
     try {
         await connect()
-        const event = await syncNavigation();
         const Events = await event.find()
         if (!Events || Events.length === 0) {
             return NextResponse.json({
