@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.2",
     "axios": "^1.18.1",
     "lucide-react": "^1.26.0",
     "mongoose": "^9.8.0",
