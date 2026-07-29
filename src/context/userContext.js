@@ -9,7 +9,7 @@ export const GetContext = ({ children }) => {
     const [user, setUser] = useState(null)
     const getUser = async () => {
         try {
-            const result = await axios.get("/api/me")
+            const result = await axios.get("/api/user")
             if (result.data.success) {
                 console.log(result.data);
                 setUser(result.data)
