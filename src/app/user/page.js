@@ -61,7 +61,7 @@ const CreateUser = () => {
                                 Free student account
                             </span>
 
-                            <h1 className="text-xl font-bold text-[#071a4a] sm:text-2xl">
+                            <h1 className="text-xl font-bold text-[#071a4a] md:text-black">
                                 Create your account
                             </h1>
 
