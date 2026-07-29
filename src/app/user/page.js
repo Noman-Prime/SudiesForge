@@ -61,11 +61,11 @@ const CreateUser = () => {
                                 Free student account
                             </span>
 
-                            <h1 className="text-xl font-bold text-[#071a4a] md:text-black">
+                            <h1 className="text-[18px] font-bold leading-6 text-[#071a4a]">
                                 Create your account
                             </h1>
 
-                            <p className="mt-2 max-w-md text-xs leading-5 text-slate-500 sm:text-[13px]">
+                            <p className="mt-1.5 max-w-md text-[12px] font-medium leading-5 text-slate-600">
                                 Get access to free notes, lectures, MCQs, mock tests and exam preparation material.
                             </p>
                         </div>
@@ -160,7 +160,7 @@ const CreateUser = () => {
                                 StudiesForge resources
                             </p>
 
-                            <h2 className="mt-2 text-base font-bold leading-6 text-[#071a4a]">
+                            <h2 className="mt-2 text-[18px] font-bold leading-6 text-[#071a4a]">
                                 Prepare smarter with free educational content.
                             </h2>
 
