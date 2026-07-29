@@ -26,3 +26,4 @@ export const createUser = async (req) => {
         }, { status: 500 })
     }
 }
+
