@@ -1,36 +1,50 @@
-"use client"
-import { useUser } from "@/context/userContext"
-import axios from "axios"
-import { useState } from "react"
-import { toast } from "react-toastify"
-import Image from "next/image"
+"use client";
+
+import { useUser } from "@/context/userContext";
+import axios from "axios";
+import { useState } from "react";
+import { toast } from "react-toastify";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const Login = () => {
-    const { setUser } = useUser()
+    const { setUser } = useUser();
+    const navigate = useRouter()
+
     const [data, setData] = useState({
         email: "",
         password: ""
-    })
+    });
+
     const updateValue = (e) => {
         setData((pre) => ({
             ...pre,
             [e.target.name]: e.target.value
-        }))
-    }
+        }));
+    };
 
     const getLogin = async () => {
         try {
-            const result = await axios.post("/api/login", data, { withCredentials: true })
+            const result = await axios.post("/api/login", data, { withCredentials: true });
+
             if (result.data.success) {
-                toast.success("Welcome To Studies Forge")
-                console.log(result.data);
-                setUser(result.data)
+                const currentUser = await axios.get("/api/user", { withCredentials: true });
+                setUser(currentUser.data.user);
+                setData({ email: "", password: "" });
+                if (currentUser.data.user.role === "admin") {
+                    navigate.push("/admin")
+                    toast.success("Welcome To Studies Forge", { autoClose: 3000 });
+                }
+                else {
+                    navigate.push("/")
+                    toast.success("Welcome To Studies Forge", { autoClose: 3000 });
+                }
             }
         } catch (error) {
-            console.log(error.response?.data?.error);
-            toast.error(error.response?.data?.error)
+            toast.error(error.response?.data?.message || "Login failed");
         }
-    }
+    };
+
     return (
         <div className="min-h-screen bg-[#f7faff]">
             <header className="relative z-50 border-b border-slate-200 bg-white">
@@ -68,7 +82,7 @@ const Login = () => {
                             </p>
                         </div>
 
-                        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+                        <div className="space-y-5">
                             <div>
                                 <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">
                                     Email
@@ -94,7 +108,7 @@ const Login = () => {
                             <button type="button" onClick={getLogin} className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]">
                                 Sign in
                             </button>
-                        </form>
+                        </div>
 
                         <p className="!mb-0 !mt-6 text-center !text-[12px] !text-slate-500">
                             Don&apos;t have an account?{" "}
@@ -194,6 +208,6 @@ const Login = () => {
             </main>
         </div>
     );
-}
+};
 
-export default Login
+export default Login;

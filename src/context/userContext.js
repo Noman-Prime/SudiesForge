@@ -11,8 +11,7 @@ export const GetContext = ({ children }) => {
         try {
             const result = await axios.get("/api/user")
             if (result.data.success) {
-                console.log(result.data);
-                setUser(result.data)
+                setUser(result.data.user)
             }
         } catch (error) {
             console.log(error);

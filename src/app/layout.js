@@ -36,8 +36,7 @@ export default function RootLayout({ children }) {
         <GetContext>
           {children}
         </GetContext>
-
-        <ToastContainer position="top-right" autoClose={6000} pauseOnHover pauseOnFocusLoss closeOnClick={false} closeButton={true} />
+        <ToastContainer position="top-right" autoClose={false} pauseOnHover pauseOnFocusLoss closeOnClick={false} closeButton />
       </body>
     </html>
   );

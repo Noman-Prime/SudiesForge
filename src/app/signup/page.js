@@ -27,11 +27,11 @@ const CreateUser = () => {
         try {
             const result = await axios.post("/api/user", data, { withCredentials: true })
             if (result.data.success) {
-                toast.success("Account is Registed")
-                setUser(result.data)
+                toast.success("Account is Registed",{ autoClose: 3000})
+                setUser(result.data.user)
             }
         } catch (error) {
-            console.log(error);
+            toast.error(error.response?.data?.error || " Signup Fails")
         }
     }
 
