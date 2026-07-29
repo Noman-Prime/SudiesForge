@@ -56,16 +56,16 @@ const CreateUser = () => {
             <main className="px-4 py-7 sm:px-6 sm:py-10 lg:py-12">
                 <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_15px_45px_rgba(15,23,42,0.07)] lg:grid-cols-[1.18fr_0.82fr]">
                     <div className="p-5 sm:p-8 lg:p-10">
-                        <div className="mb-7">
+                        <div className="mb-6">
                             <span className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
                                 Free student account
                             </span>
 
-                            <h1 className="text-[18px] font-bold leading-6 text-[#071a4a]">
+                            <h1 className="!m-0 !text-[18px] !font-bold !leading-6 !text-[#071a4a]">
                                 Create your account
                             </h1>
 
-                            <p className="mt-1.5 max-w-md text-[12px] font-medium leading-5 text-slate-600">
+                            <p className="!mb-0 !mt-1.5 max-w-md !text-[12px] !font-medium !leading-5 !text-slate-600">
                                 Get access to free notes, lectures, MCQs, mock tests and exam preparation material.
                             </p>
                         </div>
