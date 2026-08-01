@@ -31,45 +31,20 @@ const CreateUser = () => {
 
     const signUp = async () => {
         try {
-            const result = await axios.post(
-                "/api/user",
-                data,
-                {
-                    withCredentials: true
-                }
-            )
-
+            const result = await axios.post("/api/user", data, { withCredentials: true })
             if (result.data.success) {
-                const createdUser = result.data.user
-
-                setUser(createdUser)
-
-                setData({
-                    firstname: "",
-                    lastname: "",
-                    email: "",
-                    password: "",
-                    contactnumber: "",
-                    country: ""
-                })
-
-                setShowPassword(false)
-
-                toast.success("Account is Registered", {
-                    autoClose: 3000
-                })
-
-                navigate.push(
-                    createdUser.role === "admin"
-                        ? "/admin"
-                        : "/"
-                )
+                setUser(result.data.user)
+                setData({ firstname: "", lastname: "", email: "", password: "", contactnumber: "", country: "" })
+                toast.success("Account is Registered", { autoClose: 3000 })
+                if (result.data.user.role === "admin") {
+                    navigate.push("/admin")
+                }
+                else {
+                    navigate.push("/")
+                }
             }
         } catch (error) {
-            toast.error(
-                error.response?.data?.message ||
-                "Signup failed"
-            )
+            toast.error( error.response?.data?.message || "Signup failed" )
         }
     }
 
