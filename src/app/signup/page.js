@@ -40,37 +40,30 @@ const CreateUser = () => {
             )
 
             if (result.data.success) {
-                const currentUser = await axios.get(
-                    "/api/user",
-                    {
-                        withCredentials: true
-                    }
+                const createdUser = result.data.user
+
+                setUser(createdUser)
+
+                setData({
+                    firstname: "",
+                    lastname: "",
+                    email: "",
+                    password: "",
+                    contactnumber: "",
+                    country: ""
+                })
+
+                setShowPassword(false)
+
+                toast.success("Account is Registered", {
+                    autoClose: 3000
+                })
+
+                navigate.push(
+                    createdUser.role === "admin"
+                        ? "/admin"
+                        : "/"
                 )
-
-                if (currentUser.data.success) {
-                    const createdUser = currentUser.data.user
-
-                    setUser(createdUser)
-
-                    setData({
-                        firstname: "",
-                        lastname: "",
-                        email: "",
-                        password: "",
-                        contactnumber: "",
-                        country: ""
-                    })
-
-                    toast.success("Account is Registered", {
-                        autoClose: 3000
-                    })
-
-                    navigate.push(
-                        createdUser.role === "admin"
-                            ? "/admin"
-                            : "/"
-                    )
-                }
             }
         } catch (error) {
             toast.error(
