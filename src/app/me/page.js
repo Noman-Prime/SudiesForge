@@ -3,7 +3,8 @@
 import { useUser } from "@/context/userContext"
 import axios from "axios"
 import Image from "next/image"
-import { CalendarDays, Mail, MapPin, Pencil, Phone, Save, ShieldCheck, UserRound } from "lucide-react"
+import Link from "next/link"
+import { CalendarDays, LockKeyhole, Mail, MapPin, Pencil, Phone, Save, ShieldCheck, UserRound } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "react-toastify"
 
@@ -48,7 +49,9 @@ const User = () => {
 
     const update = async () => {
         try {
-            const result = await axios.put("/api/user", data, { withCredentials: true })
+            const result = await axios.put("/api/user", data, {
+                withCredentials: true
+            })
 
             if (result.data.success) {
                 setUser(result.data.user)
@@ -56,7 +59,10 @@ const User = () => {
                 toast.success("Account details updated")
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || "User could not be updated")
+            toast.error(
+                error.response?.data?.message ||
+                "User could not be updated"
+            )
         }
     }
 
@@ -72,14 +78,20 @@ const User = () => {
     useEffect(() => {
         const getUser = async () => {
             try {
-                const result = await axios.get("/api/user", { withCredentials: true })
+                const result = await axios.get("/api/user", {
+                    withCredentials: true
+                })
 
                 if (result.data.success) {
                     setUser(result.data.user)
                 }
             } catch (error) {
                 console.log(error.response?.data)
-                toast.error(error.response?.data?.message || "Please login")
+
+                toast.error(
+                    error.response?.data?.message ||
+                    "Please login"
+                )
             }
         }
 
@@ -98,7 +110,10 @@ const User = () => {
         }
     }, [user])
 
-    const fullName = user ? `${user.firstname || ""} ${user.lastname || ""}`.trim() : ""
+    const fullName = user
+        ? `${user.firstname || ""} ${user.lastname || ""}`.trim()
+        : ""
+
     const profileImage = user?.profileimage?.url
     const userInitial = user?.firstname?.charAt(0)?.toUpperCase() || "U"
     const accountRole = user?.role
@@ -169,7 +184,9 @@ const User = () => {
                                     </div>
 
                                     <p className="!mb-0 !mt-2 !text-[12px] !font-semibold !capitalize !text-white">
-                                        {accountRole ? `${accountRole} account` : "Not available"}
+                                        {accountRole
+                                            ? `${accountRole} account`
+                                            : "Not available"}
                                     </p>
                                 </div>
 
@@ -193,11 +210,15 @@ const User = () => {
                     <div className="p-5 sm:p-7 lg:p-8">
                         <div className="border-b border-slate-200 pb-5">
                             <h2 className="!m-0 !text-[16px] !font-bold !leading-6 !text-[#071a4a]">
-                                {isEditing ? "Edit personal information" : "Personal information"}
+                                {isEditing
+                                    ? "Edit personal information"
+                                    : "Personal information"}
                             </h2>
 
                             <p className="!mb-0 !mt-1 !text-[11px] !leading-5 !text-slate-500">
-                                {isEditing ? "Update the information connected with your account." : "Information associated with your registered account."}
+                                {isEditing
+                                    ? "Update the information connected with your account."
+                                    : "Information associated with your registered account."}
                             </p>
                         </div>
 
@@ -253,6 +274,29 @@ const User = () => {
                                 <DetailCard icon={Mail} label="Email address" value={user?.email} />
                                 <DetailCard icon={Phone} label="Contact number" value={user?.contactnumber} />
                                 <DetailCard icon={MapPin} label="Country" value={user?.country} />
+
+                                <div className="flex min-h-24 items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 sm:col-span-2">
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                                            <LockKeyhole size={17} strokeWidth={2} />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p className="!m-0 !text-[10px] !font-semibold !uppercase !tracking-[0.1em] !text-slate-400">
+                                                Password
+                                            </p>
+
+                                            <p className="!mb-0 !mt-1.5 !text-[15px] !font-semibold !tracking-[0.2em] !text-slate-800">
+                                                ••••••••••••
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Link href="/me/password" className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 text-[11px] font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-100">
+                                        <Pencil size={14} />
+                                        Update
+                                    </Link>
+                                </div>
                             </div>
                         )}
 
@@ -264,7 +308,9 @@ const User = () => {
 
                                 <div>
                                     <p className="!m-0 !text-[12px] !font-semibold !capitalize !text-[#071a4a]">
-                                        {accountRole ? `${accountRole} account` : "Account role not available"}
+                                        {accountRole
+                                            ? `${accountRole} account`
+                                            : "Account role not available"}
                                     </p>
 
                                     <p className="!mb-0 !mt-1 !text-[10px] !leading-4 !text-slate-500">
@@ -276,8 +322,15 @@ const User = () => {
 
                         <div className="mt-5 flex justify-end border-t border-slate-200 pt-5">
                             <button type="button" onClick={handleUpdate} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99] sm:w-auto">
-                                {isEditing ? <Save size={17} /> : <Pencil size={17} />}
-                                {isEditing ? "Save changes" : "Update"}
+                                {isEditing ? (
+                                    <Save size={17} />
+                                ) : (
+                                    <Pencil size={17} />
+                                )}
+
+                                {isEditing
+                                    ? "Save changes"
+                                    : "Update"}
                             </button>
                         </div>
                     </div>

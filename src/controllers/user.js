@@ -2,6 +2,7 @@ import connect from "@/lib/db"
 import sendToken from "@/lib/userToken"
 import user from "@/models/user"
 import bcrypt from "bcryptjs"
+import { flightRouterStateSchema } from "next/dist/server/app-render/types"
 import { NextResponse } from "next/server"
 
 
@@ -124,6 +125,69 @@ export const deleteUser = async (id) => {
         return res
     } catch (error) {
         console.log(error);
+        return NextResponse.json({
+            success: false,
+            message: "Something went wrong"
+        }, { status: 500 })
+    }
+}
+
+export const updatePassword = async (req, id) => {
+    try {
+        await connect()
+        const { currentPassword, newPassword, confirmPassword, verifyOnly } = await req.json()
+        if (!currentPassword) {
+            return NextResponse.json({
+                success: false,
+                message: "Please enter your current password"
+            }, { status: 400 })
+        }
+        const User = await user.findById(id).select("+password")
+        if (!User) {
+            return NextResponse.json({
+                success: false,
+                message: "Please login"
+            }, { status: 401 })
+        }
+        const isPasswordCorrect = await User.compare(currentPassword)
+        if (!isPasswordCorrect) {
+            return NextResponse.json({
+                success: false,
+                message: "Your current password is incorrect"
+            }, { status: 401 })
+        }
+        if (verifyOnly === true) {
+            return NextResponse.json({
+                success: true,
+                message: "Current password is verified"
+            }, { status: 200 })
+        }
+        if (!newPassword || !confirmPassword) {
+            return NextResponse.json({
+                success: false,
+                message: "Please enter and confirm your new password"
+            }, { status: 400 })
+        }
+        if (currentPassword === newPassword) {
+            return NextResponse.json({
+                success: false,
+                message: "New password must be different from current password"
+            }, { status: 400 })
+        }
+        if (newPassword !== confirmPassword) {
+            return NextResponse.json({
+                success: false,
+                message: "New password and confirm password must match"
+            }, { status: 400 })
+        }
+        User.password = newPassword
+        await User.save()
+        return NextResponse.json({
+            success: true,
+            message: "Password is updated"
+        }, { status: 200 })
+    } catch (error) {
+        console.log(error)
         return NextResponse.json({
             success: false,
             message: "Something went wrong"
