@@ -33,15 +33,17 @@ const CreateUser = () => {
         try {
             const result = await axios.post("/api/user", data, { withCredentials: true })
             if (result.data.success) {
-                setUser(result.data.user)
-                setData({ firstname: "", lastname: "", email: "", password: "", contactnumber: "", country: "" })
-                toast.success("Account is Registered", { autoClose: 3000 })
-                if (result.data.user.role === "admin") {
-                    navigate.push("/admin")
-                }
-                else {
-                    navigate.push("/")
-                }
+                console.log(result.data.user);
+                
+                // setUser(result.data.user)
+                // setData({ firstname: "", lastname: "", email: "", password: "", contactnumber: "", country: "" })
+                // toast.success("Account is Registered", { autoClose: 3000 })
+                // if (result.data.user.role === "admin") {
+                //     navigate.push("/admin")
+                // }
+                // else {
+                //     navigate.push("/")
+                // }
             }
         } catch (error) {
             toast.error( error.response?.data?.message || "Signup failed" )

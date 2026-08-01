@@ -4,6 +4,7 @@ const sendToken = (user, statusCode) => {
     const token = user.jsonwebtoken()
     const res = NextResponse.json({
         success: true,
+        User: user,
         token: token
     }, { status: statusCode })
     res.cookies.set("token", token, {
