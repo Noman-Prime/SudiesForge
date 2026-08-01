@@ -11,27 +11,40 @@ import { toast } from "react-toastify";
 
 const Navbar = () => {
     const [show, setShow] = useState(false);
+    const [showUser, setShowUser] = useState(false);
 
     const { event } = useEvent();
     const { user, setUser } = useUser();
 
     const closeMenu = () => {
         setShow(false);
+        setShowUser(false);
     };
 
     const toggleMenu = () => {
         setShow((prev) => !prev);
+        setShowUser(false);
+    };
+
+    const toggleUserMenu = () => {
+        if (window.matchMedia("(max-width: 767px)").matches) {
+            setShowUser((prev) => !prev);
+            setShow(false);
+        }
     };
 
     const logout = async () => {
         try {
-            const result = await axios.post("/api/logout")
-            if (result) {
-                setUser(null)
-                toast.success("User is logout")
+            const result = await axios.post("/api/logout", {}, { withCredentials: true });
+
+            if (result.data.success) {
+                setUser(null);
+                setShow(false);
+                setShowUser(false);
+                toast.success("User is logged out");
             }
         } catch (error) {
-            toast.error(error.response?.data?.error)
+            toast.error(error.response?.data?.message || "Logout failed");
         }
     };
 
@@ -47,12 +60,12 @@ const Navbar = () => {
 
                 <div className="ml-auto flex items-center gap-2.5">
                     <div className="hidden items-center gap-1 md:flex">
-                        <Link href="/" className="rounded-lg px-3 py-2 text-lg font-semibold text-[#1E3A8A] transition hover:bg-blue-50">
+                        <Link href="/" onClick={closeMenu} className="rounded-lg px-3 py-2 text-lg font-semibold text-[#1E3A8A] transition hover:bg-blue-50">
                             Home
                         </Link>
 
                         {event?.map((e) => (
-                            <Link key={e._id} href={`/events/${e._id}`} className="rounded-lg px-3 py-2 text-lg font-semibold text-[#1E3A8A] transition hover:bg-blue-50">
+                            <Link key={e._id} href={`/events/${e._id}`} onClick={closeMenu} className="rounded-lg px-3 py-2 text-lg font-semibold text-[#1E3A8A] transition hover:bg-blue-50">
                                 {e.name}
                             </Link>
                         ))}
@@ -63,7 +76,7 @@ const Navbar = () => {
                     </button>
 
                     <div className="group relative">
-                        <div className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 text-[#1E3A8A] transition hover:border-blue-200 hover:bg-blue-50">
+                        <button onClick={toggleUserMenu} type="button" aria-label="User account menu" aria-expanded={showUser} aria-haspopup="menu" className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 text-[#1E3A8A] transition hover:border-blue-200 hover:bg-blue-50 active:scale-95">
                             {profileImage ? (
                                 <Image src={profileImage} alt={accountName || "User profile"} width={24} height={24} unoptimized className="h-6 w-6 rounded-full object-cover" />
                             ) : (
@@ -76,10 +89,10 @@ const Navbar = () => {
                                 </span>
                             )}
 
-                            <ChevronDown size={15} className="hidden transition-transform group-hover:rotate-180 sm:block" />
-                        </div>
+                            <ChevronDown size={15} className={`hidden transition-transform sm:block ${showUser ? "rotate-180" : ""} md:group-hover:rotate-180`} />
+                        </button>
 
-                        <div role="menu" className="invisible absolute right-0 top-full z-50 w-64 translate-y-2 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                        <div role="menu" className={`absolute right-0 top-full z-50 w-64 pt-2 transition-all duration-200 ${showUser ? "visible translate-y-0 opacity-100" : "invisible translate-y-2 opacity-0 md:group-hover:visible md:group-hover:translate-y-0 md:group-hover:opacity-100"}`}>
                             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                                 {user ? (
                                     <>
@@ -94,15 +107,15 @@ const Navbar = () => {
                                                 )}
 
                                                 <div className="min-w-0">
-                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                                    <p className="!m-0 !text-[10px] !font-semibold !uppercase !tracking-wider !text-slate-400">
                                                         Account
                                                     </p>
 
-                                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                                    <p className="!mb-0 !mt-0.5 truncate !text-sm !font-semibold !text-slate-900">
                                                         {accountName || "User"}
                                                     </p>
 
-                                                    <p className="truncate text-xs text-slate-500">
+                                                    <p className="!mb-0 !mt-0.5 truncate !text-xs !text-slate-500">
                                                         {user.email}
                                                     </p>
                                                 </div>
@@ -117,11 +130,11 @@ const Navbar = () => {
                                 ) : (
                                     <div className="p-3">
                                         <div className="mb-3 px-1">
-                                            <p className="text-sm font-semibold text-slate-900">
+                                            <p className="!m-0 !text-sm !font-semibold !text-slate-900">
                                                 Welcome to Studies Forge
                                             </p>
 
-                                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            <p className="!mb-0 !mt-1 !text-xs !leading-5 !text-slate-500">
                                                 Sign in to access your learning resources.
                                             </p>
                                         </div>
