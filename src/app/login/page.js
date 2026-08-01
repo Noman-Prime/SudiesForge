@@ -6,10 +6,12 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
     const { setUser } = useUser();
     const navigate = useRouter();
+    const [showPassword, setShowPassword] = useState(false);
 
     const [data, setData] = useState({
         email: "",
@@ -38,43 +40,54 @@ const Login = () => {
             const result = await axios.post(
                 "/api/login",
                 loginData,
-                { withCredentials: true }
+                {
+                    withCredentials: true
+                }
             );
 
             if (!result.data.success) {
-                toast.error(result.data.message || "Login failed");
+                toast.error(
+                    result.data.message ||
+                    "Login failed"
+                );
+
                 return;
             }
 
-            const currentUser = await axios.get("/api/user", {
-                withCredentials: true
-            });
-
-            if (!currentUser.data.success || !currentUser.data.user) {
-                toast.error("Login session could not be verified");
+            if (!result.data.User) {
+                toast.error("User was not returned by login API");
                 return;
             }
 
-            const loggedUser = currentUser.data.user;
+            const loggedUser = result.data.User;
 
             setUser(loggedUser);
+
             setData({
                 email: "",
                 password: ""
             });
 
+            setShowPassword(false);
+
             toast.success("Welcome To Studies Forge", {
                 autoClose: 3000
             });
 
-            navigate.push(
-                loggedUser.role === "admin" ? "/admin" : "/"
-            );
+            if (loggedUser.role === "admin") {
+                navigate.push("/admin");
+            } else {
+                navigate.push("/");
+            }
         } catch (error) {
-            console.log(error.response?.data || error.message);
+            console.log(
+                error.response?.data ||
+                error.message
+            );
 
             toast.error(
-                error.response?.data?.message || "Login failed"
+                error.response?.data?.message ||
+                "Login failed"
             );
         }
     };
@@ -122,80 +135,52 @@ const Login = () => {
                             </h1>
 
                             <p className="!mb-0 !mt-1.5 max-w-md !text-[12px] !font-medium !leading-5 !text-slate-600">
-                                Sign in to continue learning and access your
-                                study resources.
+                                Sign in to continue learning and access your study resources.
                             </p>
                         </div>
 
                         <div className="space-y-5">
                             <div>
-                                <label
-                                    htmlFor="email"
-                                    className="mb-1.5 block text-xs font-semibold text-slate-700"
-                                >
+                                <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">
                                     Email
                                 </label>
 
-                                <input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={data.email}
-                                    onChange={updateValue}
-                                    placeholder="name@example.com"
-                                    autoComplete="email"
-                                    autoCapitalize="none"
-                                    spellCheck={false}
-                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                                />
+                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
                             </div>
 
                             <div>
                                 <div className="mb-1.5 flex items-center justify-between">
-                                    <label
-                                        htmlFor="password"
-                                        className="text-xs font-semibold text-slate-700"
-                                    >
+                                    <label htmlFor="password" className="text-xs font-semibold text-slate-700">
                                         Password
                                     </label>
 
-                                    <a
-                                        href="/forgot-password"
-                                        className="text-[11px] font-semibold text-blue-600 hover:underline"
-                                    >
+                                    <a href="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:underline">
                                         Forgot password?
                                     </a>
                                 </div>
 
-                                <input
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    value={data.password}
-                                    onChange={updateValue}
-                                    placeholder="Enter your password"
-                                    autoComplete="current-password"
-                                    autoCapitalize="none"
-                                    spellCheck={false}
-                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                                />
+                                <div className="relative">
+                                    <input id="password" type={showPassword ? "text" : "password"} name="password" value={data.password} onChange={updateValue} placeholder="Enter your password" autoComplete="current-password" autoCapitalize="none" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && getLogin()} className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+
+                                    <button type="button" onClick={() => setShowPassword((previousValue) => !previousValue)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                        {showPassword ? (
+                                            <EyeOff size={17} />
+                                        ) : (
+                                            <Eye size={17} />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={getLogin}
-                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
-                            >
+                            <button type="button" onClick={getLogin} className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]">
                                 Sign in
                             </button>
                         </div>
 
                         <p className="!mb-0 !mt-6 text-center !text-[12px] !text-slate-500">
                             Don&apos;t have an account?{" "}
-                            <a
-                                href="/signup"
-                                className="font-semibold text-blue-600 hover:underline"
-                            >
+
+                            <a href="/signup" className="font-semibold text-blue-600 hover:underline">
                                 Create a free account
                             </a>
                         </p>
@@ -215,8 +200,7 @@ const Login = () => {
                             </h2>
 
                             <p className="!mb-0 !mt-2 !text-[11px] !font-medium !leading-5 !text-slate-600">
-                                Sign in to access your notes, lectures, MCQs
-                                and exam preparation.
+                                Sign in to access your notes, lectures, MCQs and exam preparation.
                             </p>
                         </div>
 
