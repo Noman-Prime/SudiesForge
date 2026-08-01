@@ -5,9 +5,14 @@ import axios from "axios"
 import { useState } from "react"
 import { toast } from "react-toastify"
 import Image from "next/image"
+import { Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 const CreateUser = () => {
     const { setUser } = useUser()
+    const navigate = useRouter()
+    const [showPassword, setShowPassword] = useState(false)
+
     const [data, setData] = useState({
         firstname: "",
         lastname: "",
@@ -23,15 +28,55 @@ const CreateUser = () => {
             [e.target.name]: e.target.value
         }))
     }
+
     const signUp = async () => {
         try {
-            const result = await axios.post("/api/user", data, { withCredentials: true })
+            const result = await axios.post(
+                "/api/user",
+                data,
+                {
+                    withCredentials: true
+                }
+            )
+
             if (result.data.success) {
-                toast.success("Account is Registed",{ autoClose: 3000})
-                setUser(result.data.user)
+                const currentUser = await axios.get(
+                    "/api/user",
+                    {
+                        withCredentials: true
+                    }
+                )
+
+                if (currentUser.data.success) {
+                    const createdUser = currentUser.data.user
+
+                    setUser(createdUser)
+
+                    setData({
+                        firstname: "",
+                        lastname: "",
+                        email: "",
+                        password: "",
+                        contactnumber: "",
+                        country: ""
+                    })
+
+                    toast.success("Account is Registered", {
+                        autoClose: 3000
+                    })
+
+                    navigate.push(
+                        createdUser.role === "admin"
+                            ? "/admin"
+                            : "/"
+                    )
+                }
             }
         } catch (error) {
-            toast.error(error.response?.data?.error || " Signup Fails")
+            toast.error(
+                error.response?.data?.message ||
+                "Signup failed"
+            )
         }
     }
 
@@ -44,7 +89,9 @@ const CreateUser = () => {
                     </a>
 
                     <div className="flex items-center gap-3">
-                        <span className="hidden text-xs text-slate-500 sm:block">Already registered?</span>
+                        <span className="hidden text-xs text-slate-500 sm:block">
+                            Already registered?
+                        </span>
 
                         <a href="/login" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50">
                             Sign in
@@ -94,7 +141,7 @@ const CreateUser = () => {
                                     Email address
                                 </label>
 
-                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
                             </div>
 
                             <div>
@@ -102,7 +149,17 @@ const CreateUser = () => {
                                     Password
                                 </label>
 
-                                <input id="password" type="password" name="password" value={data.password} onChange={updateValue} placeholder="Create a secure password" autoComplete="new-password" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <div className="relative">
+                                    <input id="password" type={showPassword ? "text" : "password"} name="password" value={data.password} onChange={updateValue} placeholder="Create a secure password" autoComplete="new-password" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+
+                                    <button type="button" onClick={() => setShowPassword((pre) => !pre)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                        {showPassword ? (
+                                            <EyeOff size={17} />
+                                        ) : (
+                                            <Eye size={17} />
+                                        )}
+                                    </button>
+                                </div>
 
                                 <p className="mt-1.5 text-[10px] text-slate-400">
                                     Use a strong password to keep your account secure.
@@ -175,8 +232,13 @@ const CreateUser = () => {
                                     N
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">Notes</h3>
-                                <p className="mt-1 text-[9px] leading-4 text-slate-400">Structured study notes</p>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">
+                                    Notes
+                                </h3>
+
+                                <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                                    Structured study notes
+                                </p>
                             </div>
 
                             <div className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
@@ -184,8 +246,13 @@ const CreateUser = () => {
                                     ▶
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">Lectures</h3>
-                                <p className="mt-1 text-[9px] leading-4 text-slate-400">Topic-wise videos</p>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">
+                                    Lectures
+                                </h3>
+
+                                <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                                    Topic-wise videos
+                                </p>
                             </div>
 
                             <div className="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm">
@@ -193,8 +260,13 @@ const CreateUser = () => {
                                     ?
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">MCQs</h3>
-                                <p className="mt-1 text-[9px] leading-4 text-slate-400">Practice questions</p>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">
+                                    MCQs
+                                </h3>
+
+                                <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                                    Practice questions
+                                </p>
                             </div>
 
                             <div className="rounded-xl border border-purple-100 bg-white p-3 shadow-sm">
@@ -202,8 +274,13 @@ const CreateUser = () => {
                                     ✓
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">Mock tests</h3>
-                                <p className="mt-1 text-[9px] leading-4 text-slate-400">Full-length tests</p>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">
+                                    Mock tests
+                                </h3>
+
+                                <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                                    Full-length tests
+                                </p>
                             </div>
                         </div>
 
@@ -233,7 +310,9 @@ const CreateUser = () => {
 
                         <div className="relative z-10 mt-auto pt-6">
                             <div className="rounded-xl bg-gradient-to-r from-[#071a4a] to-[#1260e8] p-4 text-white">
-                                <h3 className="text-sm font-semibold">100% Free. Always.</h3>
+                                <h3 className="text-sm font-semibold">
+                                    100% Free. Always.
+                                </h3>
 
                                 <p className="mt-1 text-[10px] leading-4 text-blue-100">
                                     No hidden charges and no subscriptions.
@@ -244,7 +323,7 @@ const CreateUser = () => {
                 </section>
             </main>
         </div>
-    );
+    )
 }
 
 export default CreateUser
