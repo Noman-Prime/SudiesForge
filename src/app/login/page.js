@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 const Login = () => {
     const { setUser } = useUser();
-    const navigate = useRouter()
+    const navigate = useRouter();
 
     const [data, setData] = useState({
         email: "",
@@ -17,31 +17,65 @@ const Login = () => {
     });
 
     const updateValue = (e) => {
-        setData((pre) => ({
-            ...pre,
+        setData((previousData) => ({
+            ...previousData,
             [e.target.name]: e.target.value
         }));
     };
 
     const getLogin = async () => {
-        try {
-            const result = await axios.post("/api/login", data, { withCredentials: true });
+        const loginData = {
+            email: data.email.trim().toLowerCase(),
+            password: data.password
+        };
 
-            if (result.data.success) {
-                const currentUser = await axios.get("/api/user", { withCredentials: true });
-                setUser(currentUser.data.user);
-                setData({ email: "", password: "" });
-                if (currentUser.data.user.role === "admin") {
-                    navigate.push("/admin")
-                    toast.success("Welcome To Studies Forge", { autoClose: 3000 });
-                }
-                else {
-                    navigate.push("/")
-                    toast.success("Welcome To Studies Forge", { autoClose: 3000 });
-                }
+        if (!loginData.email || !loginData.password) {
+            toast.error("Please enter email and password");
+            return;
+        }
+
+        try {
+            const result = await axios.post(
+                "/api/login",
+                loginData,
+                { withCredentials: true }
+            );
+
+            if (!result.data.success) {
+                toast.error(result.data.message || "Login failed");
+                return;
             }
+
+            const currentUser = await axios.get("/api/user", {
+                withCredentials: true
+            });
+
+            if (!currentUser.data.success || !currentUser.data.user) {
+                toast.error("Login session could not be verified");
+                return;
+            }
+
+            const loggedUser = currentUser.data.user;
+
+            setUser(loggedUser);
+            setData({
+                email: "",
+                password: ""
+            });
+
+            toast.success("Welcome To Studies Forge", {
+                autoClose: 3000
+            });
+
+            navigate.push(
+                loggedUser.role === "admin" ? "/admin" : "/"
+            );
         } catch (error) {
-            toast.error(error.response?.data?.message || "Login failed");
+            console.log(error.response?.data || error.message);
+
+            toast.error(
+                error.response?.data?.message || "Login failed"
+            );
         }
     };
 
@@ -50,7 +84,14 @@ const Login = () => {
             <header className="relative z-50 border-b border-slate-200 bg-white">
                 <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
                     <a href="/" className="relative z-50">
-                        <Image src="/logo.png" alt="Studies Forge logo" width={170} height={45} priority className="relative z-50 h-9 w-auto object-contain" />
+                        <Image
+                            src="/logo.png"
+                            alt="Studies Forge logo"
+                            width={170}
+                            height={45}
+                            priority
+                            className="relative z-50 h-9 w-auto object-contain"
+                        />
                     </a>
 
                     <div className="flex items-center gap-3">
@@ -58,7 +99,10 @@ const Login = () => {
                             Don&apos;t have an account?
                         </span>
 
-                        <a href="/signup" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50">
+                        <a
+                            href="/signup"
+                            className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                        >
                             Create account
                         </a>
                     </div>
@@ -78,49 +122,88 @@ const Login = () => {
                             </h1>
 
                             <p className="!mb-0 !mt-1.5 max-w-md !text-[12px] !font-medium !leading-5 !text-slate-600">
-                                Sign in to continue learning and access your study resources.
+                                Sign in to continue learning and access your
+                                study resources.
                             </p>
                         </div>
 
                         <div className="space-y-5">
                             <div>
-                                <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                <label
+                                    htmlFor="email"
+                                    className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                >
                                     Email
                                 </label>
 
-                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value={data.email}
+                                    onChange={updateValue}
+                                    placeholder="name@example.com"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                />
                             </div>
 
                             <div>
                                 <div className="mb-1.5 flex items-center justify-between">
-                                    <label htmlFor="password" className="text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="password"
+                                        className="text-xs font-semibold text-slate-700"
+                                    >
                                         Password
                                     </label>
 
-                                    <a href="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:underline">
+                                    <a
+                                        href="/forgot-password"
+                                        className="text-[11px] font-semibold text-blue-600 hover:underline"
+                                    >
                                         Forgot password?
                                     </a>
                                 </div>
 
-                                <input id="password" type="password" name="password" value={data.password} onChange={updateValue} placeholder="Enter your password" autoComplete="current-password" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <input
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    value={data.password}
+                                    onChange={updateValue}
+                                    placeholder="Enter your password"
+                                    autoComplete="current-password"
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                />
                             </div>
 
-                            <button type="button" onClick={getLogin} className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]">
+                            <button
+                                type="button"
+                                onClick={getLogin}
+                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
+                            >
                                 Sign in
                             </button>
                         </div>
 
                         <p className="!mb-0 !mt-6 text-center !text-[12px] !text-slate-500">
                             Don&apos;t have an account?{" "}
-                            <a href="/" className="font-semibold text-blue-600 hover:underline">
+                            <a
+                                href="/signup"
+                                className="font-semibold text-blue-600 hover:underline"
+                            >
                                 Create a free account
                             </a>
                         </p>
                     </div>
 
                     <aside className="relative hidden overflow-hidden border-l border-blue-100 bg-[#f4f8ff] p-7 lg:flex lg:flex-col">
-                        <div className="absolute -right-14 -top-14 z-0 h-40 w-40 rounded-full bg-blue-100/70"></div>
-                        <div className="absolute -bottom-20 -left-20 z-0 h-48 w-48 rounded-full bg-white/60"></div>
+                        <div className="absolute -right-14 -top-14 z-0 h-40 w-40 rounded-full bg-blue-100/70" />
+                        <div className="absolute -bottom-20 -left-20 z-0 h-48 w-48 rounded-full bg-white/60" />
 
                         <div className="relative z-10">
                             <p className="!m-0 !text-[10px] !font-semibold !uppercase !tracking-[0.16em] !text-blue-600">
@@ -132,7 +215,8 @@ const Login = () => {
                             </h2>
 
                             <p className="!mb-0 !mt-2 !text-[11px] !font-medium !leading-5 !text-slate-600">
-                                Sign in to access your notes, lectures, MCQs and exam preparation.
+                                Sign in to access your notes, lectures, MCQs
+                                and exam preparation.
                             </p>
                         </div>
 
