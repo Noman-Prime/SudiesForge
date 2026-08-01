@@ -58,7 +58,7 @@ const Login = () => {
                             Don&apos;t have an account?
                         </span>
 
-                        <a href="/user" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50">
+                        <a href="/signup" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50">
                             Create account
                         </a>
                     </div>
@@ -112,7 +112,7 @@ const Login = () => {
 
                         <p className="!mb-0 !mt-6 text-center !text-[12px] !text-slate-500">
                             Don&apos;t have an account?{" "}
-                            <a href="/user" className="font-semibold text-blue-600 hover:underline">
+                            <a href="/signup" className="font-semibold text-blue-600 hover:underline">
                                 Create a free account
                             </a>
                         </p>
