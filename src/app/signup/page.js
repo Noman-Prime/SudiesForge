@@ -1,17 +1,18 @@
-"use client"
+"use client";
 
-import { useUser } from "@/context/userContext"
-import axios from "axios"
-import { useState } from "react"
-import { toast } from "react-toastify"
-import Image from "next/image"
-import { Eye, EyeOff } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useUser } from "@/context/userContext";
+import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "react-toastify";
 
 const CreateUser = () => {
-    const { setUser } = useUser()
-    const navigate = useRouter()
-    const [showPassword, setShowPassword] = useState(false)
+    const { setUser } = useUser();
+    const navigate = useRouter();
+
+    const [showPassword, setShowPassword] = useState(false);
 
     const [data, setData] = useState({
         firstname: "",
@@ -19,41 +20,62 @@ const CreateUser = () => {
         email: "",
         password: "",
         contactnumber: "",
-        country: ""
-    })
+        country: "",
+    });
 
     const updateValue = (e) => {
         setData((pre) => ({
             ...pre,
-            [e.target.name]: e.target.value
-        }))
-    }
+            [e.target.name]: e.target.value,
+        }));
+    };
 
     const signUp = async () => {
         try {
-            const result = await axios.post("/api/user", data, { withCredentials: true })
+            const result = await axios.post("/api/user", data, {
+                withCredentials: true,
+            });
+
             if (result.data.success) {
-                setUser(result.data.User)
-                setData({ firstname: "", lastname: "", email: "", password: "", contactnumber: "", country: "" })
-                toast.success("Account is Registered", { autoClose: 3000 })
+                setUser(result.data.User);
+
+                setData({
+                    firstname: "",
+                    lastname: "",
+                    email: "",
+                    password: "",
+                    contactnumber: "",
+                    country: "",
+                });
+
+                toast.success("Account is Registered", {
+                    autoClose: 3000,
+                });
+
                 if (result.data.User.role === "admin") {
-                    navigate.push("/admin")
-                }
-                else {
-                    navigate.push("/")
+                    navigate.push("/admin");
+                } else {
+                    navigate.push("/");
                 }
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || "Signup failed")
+            toast.error(error.response?.data?.message || "Signup failed");
         }
-    }
+    };
 
     return (
         <div className="min-h-screen bg-[#f7faff]">
             <header className="relative z-50 border-b border-slate-200 bg-white">
                 <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
                     <a href="/" className="relative z-50">
-                        <Image src="/logo.png" alt="StudiesForge logo" width={170} height={45} priority className="relative z-50 h-9 w-auto object-contain" />
+                        <Image
+                            src="/logo.png"
+                            alt="StudiesForge logo"
+                            width={170}
+                            height={45}
+                            priority
+                            className="relative z-50 h-9 w-auto object-contain"
+                        />
                     </a>
 
                     <div className="flex items-center gap-3">
@@ -61,7 +83,10 @@ const CreateUser = () => {
                             Already registered?
                         </span>
 
-                        <a href="/login" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50">
+                        <a
+                            href="/login"
+                            className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                        >
                             Sign in
                         </a>
                     </div>
@@ -76,51 +101,116 @@ const CreateUser = () => {
                                 Free student account
                             </span>
 
-                            <h1 className="!m-0 !text-[18px] !font-bold !leading-6 !text-[#071a4a]">
+                            <h1 className="m-0 text-[18px] font-bold leading-6 text-[#071a4a]">
                                 Create your account
                             </h1>
 
-                            <p className="!mb-0 !mt-1.5 max-w-md !text-[12px] !font-medium !leading-5 !text-slate-600">
-                                Get access to free notes, lectures, MCQs, mock tests and exam preparation material.
+                            <p className="mb-0 mt-1.5 max-w-md text-[12px] font-medium leading-5 text-slate-600">
+                                Get access to free notes, lectures, MCQs, mock tests and exam
+                                preparation material.
                             </p>
                         </div>
 
-                        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                        <form
+                            className="space-y-4"
+                            onSubmit={(e) => e.preventDefault()}
+                        >
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label htmlFor="firstname" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="firstname"
+                                        className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                    >
                                         First name
                                     </label>
 
-                                    <input id="firstname" type="text" name="firstname" value={data.firstname} onChange={updateValue} placeholder="Enter first name" autoComplete="given-name" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="firstname"
+                                        type="text"
+                                        name="firstname"
+                                        value={data.firstname}
+                                        onChange={updateValue}
+                                        placeholder="Enter first name"
+                                        autoComplete="given-name"
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
                                 </div>
 
                                 <div>
-                                    <label htmlFor="lastname" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="lastname"
+                                        className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                    >
                                         Last name
                                     </label>
 
-                                    <input id="lastname" type="text" name="lastname" value={data.lastname} onChange={updateValue} placeholder="Enter last name" autoComplete="family-name" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="lastname"
+                                        type="text"
+                                        name="lastname"
+                                        value={data.lastname}
+                                        onChange={updateValue}
+                                        placeholder="Enter last name"
+                                        autoComplete="family-name"
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
                                 </div>
                             </div>
 
                             <div>
-                                <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                <label
+                                    htmlFor="email"
+                                    className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                >
                                     Email address
                                 </label>
 
-                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value={data.email}
+                                    onChange={updateValue}
+                                    placeholder="name@example.com"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                />
                             </div>
 
                             <div>
-                                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                <label
+                                    htmlFor="password"
+                                    className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                >
                                     Password
                                 </label>
 
                                 <div className="relative">
-                                    <input id="password" type={showPassword ? "text" : "password"} name="password" value={data.password} onChange={updateValue} placeholder="Create a secure password" autoComplete="new-password" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={data.password}
+                                        onChange={updateValue}
+                                        placeholder="Create a secure password"
+                                        autoComplete="new-password"
+                                        autoCapitalize="none"
+                                        spellCheck={false}
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
 
-                                    <button type="button" onClick={() => setShowPassword((pre) => !pre)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowPassword((previousValue) => !previousValue)
+                                        }
+                                        aria-label={
+                                            showPassword ? "Hide password" : "Show password"
+                                        }
+                                        className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    >
                                         {showPassword ? (
                                             <EyeOff size={17} />
                                         ) : (
@@ -136,49 +226,89 @@ const CreateUser = () => {
 
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label htmlFor="contactnumber" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="contactnumber"
+                                        className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                    >
                                         Contact number
                                     </label>
 
-                                    <input id="contactnumber" type="tel" name="contactnumber" value={data.contactnumber} onChange={updateValue} placeholder="03XXXXXXXXX" inputMode="numeric" maxLength={11} autoComplete="tel" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="contactnumber"
+                                        type="tel"
+                                        name="contactnumber"
+                                        value={data.contactnumber}
+                                        onChange={updateValue}
+                                        placeholder="03XXXXXXXXX"
+                                        inputMode="numeric"
+                                        maxLength={11}
+                                        autoComplete="tel"
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
                                 </div>
 
                                 <div>
-                                    <label htmlFor="country" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="country"
+                                        className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                    >
                                         Country
                                     </label>
 
-                                    <input id="country" type="text" name="country" value={data.country} onChange={updateValue} placeholder="Enter country" autoComplete="country-name" className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="country"
+                                        type="text"
+                                        name="country"
+                                        value={data.country}
+                                        onChange={updateValue}
+                                        placeholder="Enter country"
+                                        autoComplete="country-name"
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
                                 </div>
                             </div>
 
                             <p className="text-[10px] leading-4 text-slate-500">
                                 By creating an account, you agree to our{" "}
-                                <a href="/terms" className="font-semibold text-blue-600 hover:underline">
+                                <a
+                                    href="/terms"
+                                    className="font-semibold text-blue-600 hover:underline"
+                                >
                                     Terms of Use
                                 </a>{" "}
                                 and{" "}
-                                <a href="/privacy" className="font-semibold text-blue-600 hover:underline">
+                                <a
+                                    href="/privacy"
+                                    className="font-semibold text-blue-600 hover:underline"
+                                >
                                     Privacy Policy
-                                </a>.
+                                </a>
+                                .
                             </p>
 
-                            <button type="button" onClick={signUp} className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]">
+                            <button
+                                type="button"
+                                onClick={signUp}
+                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
+                            >
                                 Create free account
                             </button>
                         </form>
 
                         <p className="mt-5 text-center text-xs text-slate-500">
                             Already have an account?{" "}
-                            <a href="/login" className="font-semibold text-blue-600 hover:underline">
+                            <a
+                                href="/login"
+                                className="font-semibold text-blue-600 hover:underline"
+                            >
                                 Sign in
                             </a>
                         </p>
                     </div>
 
                     <aside className="relative hidden overflow-hidden border-l border-blue-100 bg-[#f4f8ff] p-7 lg:flex lg:flex-col">
-                        <div className="absolute -right-14 -top-14 z-0 h-40 w-40 rounded-full bg-blue-100/70"></div>
-                        <div className="absolute -bottom-20 -left-20 z-0 h-48 w-48 rounded-full bg-white/60"></div>
+                        <div className="absolute -right-14 -top-14 z-0 h-40 w-40 rounded-full bg-blue-100/70" />
+                        <div className="absolute -bottom-20 -left-20 z-0 h-48 w-48 rounded-full bg-white/60" />
 
                         <div className="relative z-10">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-600">
@@ -278,9 +408,7 @@ const CreateUser = () => {
 
                         <div className="relative z-10 mt-auto pt-6">
                             <div className="rounded-xl bg-gradient-to-r from-[#071a4a] to-[#1260e8] p-4 text-white">
-                                <h3 className="text-sm font-semibold">
-                                    100% Free. Always.
-                                </h3>
+                                <h3 className="text-sm font-semibold">100% Free. Always.</h3>
 
                                 <p className="mt-1 text-[10px] leading-4 text-blue-100">
                                     No hidden charges and no subscriptions.
@@ -291,7 +419,7 @@ const CreateUser = () => {
                 </section>
             </main>
         </div>
-    )
-}
+    );
+};
 
-export default CreateUser
+export default CreateUser;

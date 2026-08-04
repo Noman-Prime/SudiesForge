@@ -2,33 +2,34 @@
 
 import { useUser } from "@/context/userContext";
 import axios from "axios";
-import { useState } from "react";
-import { toast } from "react-toastify";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { toast } from "react-toastify";
 
 const Login = () => {
     const { setUser } = useUser();
     const navigate = useRouter();
+
     const [showPassword, setShowPassword] = useState(false);
 
     const [data, setData] = useState({
         email: "",
-        password: ""
+        password: "",
     });
 
     const updateValue = (e) => {
         setData((previousData) => ({
             ...previousData,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         }));
     };
 
     const getLogin = async () => {
         const loginData = {
             email: data.email.trim().toLowerCase(),
-            password: data.password
+            password: data.password,
         };
 
         if (!loginData.email || !loginData.password) {
@@ -37,20 +38,12 @@ const Login = () => {
         }
 
         try {
-            const result = await axios.post(
-                "/api/login",
-                loginData,
-                {
-                    withCredentials: true
-                }
-            );
+            const result = await axios.post("/api/login", loginData, {
+                withCredentials: true,
+            });
 
             if (!result.data.success) {
-                toast.error(
-                    result.data.message ||
-                    "Login failed"
-                );
-
+                toast.error(result.data.message || "Login failed");
                 return;
             }
 
@@ -65,13 +58,13 @@ const Login = () => {
 
             setData({
                 email: "",
-                password: ""
+                password: "",
             });
 
             setShowPassword(false);
 
             toast.success("Welcome To Studies Forge", {
-                autoClose: 3000
+                autoClose: 3000,
             });
 
             if (loggedUser.role === "admin") {
@@ -80,15 +73,9 @@ const Login = () => {
                 navigate.push("/");
             }
         } catch (error) {
-            console.log(
-                error.response?.data ||
-                error.message
-            );
+            console.log(error.response?.data || error.message);
 
-            toast.error(
-                error.response?.data?.message ||
-                "Login failed"
-            );
+            toast.error(error.response?.data?.message || "Login failed");
         }
     };
 
@@ -130,39 +117,80 @@ const Login = () => {
                                 Student login
                             </span>
 
-                            <h1 className="!m-0 !text-[20px] !font-bold !leading-7 !text-[#071a4a]">
+                            <h1 className="m-0 text-[20px] font-bold leading-7 text-[#071a4a]">
                                 Welcome back
                             </h1>
 
-                            <p className="!mb-0 !mt-1.5 max-w-md !text-[12px] !font-medium !leading-5 !text-slate-600">
+                            <p className="mb-0 mt-1.5 max-w-md text-[12px] font-medium leading-5 text-slate-600">
                                 Sign in to continue learning and access your study resources.
                             </p>
                         </div>
 
                         <div className="space-y-5">
                             <div>
-                                <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                <label
+                                    htmlFor="email"
+                                    className="mb-1.5 block text-xs font-semibold text-slate-700"
+                                >
                                     Email
                                 </label>
 
-                                <input id="email" type="email" name="email" value={data.email} onChange={updateValue} placeholder="name@example.com" autoComplete="email" autoCapitalize="none" spellCheck={false} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value={data.email}
+                                    onChange={updateValue}
+                                    placeholder="name@example.com"
+                                    autoComplete="email"
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                    className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                />
                             </div>
 
                             <div>
                                 <div className="mb-1.5 flex items-center justify-between">
-                                    <label htmlFor="password" className="text-xs font-semibold text-slate-700">
+                                    <label
+                                        htmlFor="password"
+                                        className="text-xs font-semibold text-slate-700"
+                                    >
                                         Password
                                     </label>
 
-                                    <a href="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:underline">
+                                    <a
+                                        href="/forgot-password"
+                                        className="text-[11px] font-semibold text-blue-600 hover:underline"
+                                    >
                                         Forgot password?
                                     </a>
                                 </div>
 
                                 <div className="relative">
-                                    <input id="password" type={showPassword ? "text" : "password"} name="password" value={data.password} onChange={updateValue} placeholder="Enter your password" autoComplete="current-password" autoCapitalize="none" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && getLogin()} className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={data.password}
+                                        onChange={updateValue}
+                                        placeholder="Enter your password"
+                                        autoComplete="current-password"
+                                        autoCapitalize="none"
+                                        spellCheck={false}
+                                        onKeyDown={(e) => e.key === "Enter" && getLogin()}
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                    />
 
-                                    <button type="button" onClick={() => setShowPassword((previousValue) => !previousValue)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowPassword((previousValue) => !previousValue)
+                                        }
+                                        aria-label={
+                                            showPassword ? "Hide password" : "Show password"
+                                        }
+                                        className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    >
                                         {showPassword ? (
                                             <EyeOff size={17} />
                                         ) : (
@@ -172,15 +200,21 @@ const Login = () => {
                                 </div>
                             </div>
 
-                            <button type="button" onClick={getLogin} className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]">
+                            <button
+                                type="button"
+                                onClick={getLogin}
+                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
+                            >
                                 Sign in
                             </button>
                         </div>
 
-                        <p className="!mb-0 !mt-6 text-center !text-[12px] !text-slate-500">
+                        <p className="mb-0 mt-6 text-center text-[12px] text-slate-500">
                             Don&apos;t have an account?{" "}
-
-                            <a href="/signup" className="font-semibold text-blue-600 hover:underline">
+                            <a
+                                href="/signup"
+                                className="font-semibold text-blue-600 hover:underline"
+                            >
                                 Create a free account
                             </a>
                         </p>
@@ -191,16 +225,17 @@ const Login = () => {
                         <div className="absolute -bottom-20 -left-20 z-0 h-48 w-48 rounded-full bg-white/60" />
 
                         <div className="relative z-10">
-                            <p className="!m-0 !text-[10px] !font-semibold !uppercase !tracking-[0.16em] !text-blue-600">
+                            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-600">
                                 Continue learning
                             </p>
 
-                            <h2 className="!mb-0 !mt-2 !text-[16px] !font-bold !leading-6 !text-[#071a4a]">
+                            <h2 className="mb-0 mt-2 text-[16px] font-bold leading-6 text-[#071a4a]">
                                 Your study resources are ready.
                             </h2>
 
-                            <p className="!mb-0 !mt-2 !text-[11px] !font-medium !leading-5 !text-slate-600">
-                                Sign in to access your notes, lectures, MCQs and exam preparation.
+                            <p className="mb-0 mt-2 text-[11px] font-medium leading-5 text-slate-600">
+                                Sign in to access your notes, lectures, MCQs and exam
+                                preparation.
                             </p>
                         </div>
 
@@ -210,11 +245,11 @@ const Login = () => {
                                     N
                                 </div>
 
-                                <h3 className="!m-0 !text-[12px] !font-semibold !text-[#071a4a]">
+                                <h3 className="m-0 text-[12px] font-semibold text-[#071a4a]">
                                     Notes
                                 </h3>
 
-                                <p className="!mb-0 !mt-1 !text-[9px] !leading-4 !text-slate-500">
+                                <p className="mb-0 mt-1 text-[9px] leading-4 text-slate-500">
                                     Structured notes
                                 </p>
                             </div>
@@ -224,11 +259,11 @@ const Login = () => {
                                     ▶
                                 </div>
 
-                                <h3 className="!m-0 !text-[12px] !font-semibold !text-[#071a4a]">
+                                <h3 className="m-0 text-[12px] font-semibold text-[#071a4a]">
                                     Lectures
                                 </h3>
 
-                                <p className="!mb-0 !mt-1 !text-[9px] !leading-4 !text-slate-500">
+                                <p className="mb-0 mt-1 text-[9px] leading-4 text-slate-500">
                                     Topic-wise videos
                                 </p>
                             </div>
@@ -238,11 +273,11 @@ const Login = () => {
                                     ?
                                 </div>
 
-                                <h3 className="!m-0 !text-[12px] !font-semibold !text-[#071a4a]">
+                                <h3 className="m-0 text-[12px] font-semibold text-[#071a4a]">
                                     MCQs
                                 </h3>
 
-                                <p className="!mb-0 !mt-1 !text-[9px] !leading-4 !text-slate-500">
+                                <p className="mb-0 mt-1 text-[9px] leading-4 text-slate-500">
                                     Practice questions
                                 </p>
                             </div>
@@ -252,22 +287,22 @@ const Login = () => {
                                     ✓
                                 </div>
 
-                                <h3 className="!m-0 !text-[12px] !font-semibold !text-[#071a4a]">
+                                <h3 className="m-0 text-[12px] font-semibold text-[#071a4a]">
                                     Mock tests
                                 </h3>
 
-                                <p className="!mb-0 !mt-1 !text-[9px] !leading-4 !text-slate-500">
+                                <p className="mb-0 mt-1 text-[9px] leading-4 text-slate-500">
                                     Full-length tests
                                 </p>
                             </div>
                         </div>
 
                         <div className="relative z-10 mt-auto rounded-xl bg-gradient-to-r from-[#071a4a] to-[#1260e8] p-4 text-white">
-                            <h3 className="!m-0 !text-[14px] !font-semibold !text-white">
+                            <h3 className="m-0 text-[14px] font-semibold text-white">
                                 100% Free. Always.
                             </h3>
 
-                            <p className="!mb-0 !mt-1 !text-[10px] !leading-4 !text-blue-100">
+                            <p className="mb-0 mt-1 text-[10px] leading-4 text-blue-100">
                                 No subscriptions and no hidden charges.
                             </p>
                         </div>
