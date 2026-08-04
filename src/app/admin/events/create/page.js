@@ -1,11 +1,13 @@
 "use client";
 
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const Create = () => {
+    const navigate = useRouter()
     const [data, setData] = useState({
         name: ""
     });
@@ -29,7 +31,7 @@ const Create = () => {
             if (result.data.success) {
                 toast.success("Event is created");
                 console.log(result.data);
-
+                navigate.push("/admin/events")
                 setData({
                     name: ""
                 });

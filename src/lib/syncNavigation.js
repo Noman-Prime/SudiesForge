@@ -6,12 +6,15 @@ const syncNavigation = async () => {
 
     const navigation = events.map((item) => ({
         _id: item._id.toString(),
-        name: item.name
+        name: item.name,
     }));
 
-    const { env } = getCloudflareContext();
+    const { env } = await getCloudflareContext({ async: true });
 
-    await env.NAVIGATION_KV.put("events", JSON.stringify(navigation));
+    await env.NAVIGATION_KV.put(
+        "events",
+        JSON.stringify(navigation),
+    );
 
     return navigation;
 };

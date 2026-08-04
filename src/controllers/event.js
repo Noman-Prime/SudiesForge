@@ -75,8 +75,8 @@ export const getSingleEvent = async (id) => {
 export const updateEvent = async (req, id) => {
     try {
         await connect()
-        const body = await req.json()
-        const Event = await event.findByIdAndUpdate(id, body, { new: true, runValidators: true })
+        const { name } = await req.json()
+        const Event = await event.findByIdAndUpdate(id, { name }, { new: true, runValidators: true })
         if (!Event) {
             return NextResponse.json({
                 success: false,
