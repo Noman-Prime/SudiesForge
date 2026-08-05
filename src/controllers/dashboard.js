@@ -1,42 +1,43 @@
-import connect from "@/lib/db"
-import mongoose from "mongoose"
-import { NextResponse } from "next/server"
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { NextResponse } from "next/server";
 
-export const deashbord = async (req) => {
+export const deashbord = async () => {
     try {
-        await connect()
-        const database = mongoose.connection.db
-        const collectionList = await database.listCollections({}, { nameOnly: true }).toArray()
-        const collections = await Promise.all(
-            collectionList
-                .filter((item) => !item.name.startsWith("system."))
-                .map(async (item) => {
-                    const count = await database
-                        .collection(item.name)
-                        .estimatedDocumentCount();
+        const { env } = await getCloudflareContext({ async: true });
 
-                    const Name = item.name
-                        .replace(/[-_]/g, " ")
-                        .replace(/\b\w/g, (character) =>
-                            character.toUpperCase()
-                        );
-                    return {
-                        key: item.name,
-                        name: Name,
-                        count
-                    };
-                })
+        if (!env.NAVIGATION_KV) {
+            throw new Error("NAVIGATION_KV binding is missing");
+        }
+
+        const dashboard = await env.NAVIGATION_KV.get(
+            "dashboard",
+            "json",
         );
-        return NextResponse.json({
-            success: true,
-            collection: collections
-        }, { status: 200 })
-    } catch (error) {
-        console.log(error);
-        return NextResponse.json({
-            success: false,
-            message: "Something went Wrong"
-        }, { status: 500 })
 
+        return NextResponse.json(
+            {
+                success: true,
+                collection: dashboard?.collections || [],
+                updatedAt: dashboard?.updatedAt || null,
+            },
+            {
+                status: 200,
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "CDN-Cache-Control": "no-store",
+                    "Cloudflare-CDN-Cache-Control": "no-store",
+                },
+            },
+        );
+    } catch (error) {
+        console.error("Dashboard KV read failed:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Dashboard could not be loaded",
+            },
+            { status: 500 },
+        );
     }
-}
+};

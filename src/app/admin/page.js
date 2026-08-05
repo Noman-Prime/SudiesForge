@@ -10,7 +10,6 @@ import {
   ExternalLink,
   GraduationCap,
   LayoutDashboard,
-  LoaderCircle,
   Settings2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -29,9 +28,8 @@ const Admin = () => {
     : "Administrator";
 
   const getCollections = async () => {
-
     try {
-      const result = await axios.get("/api/dashbord", {
+      const result = await axios.get("/api/dashboard", {
         withCredentials: true,
       });
 
@@ -114,8 +112,8 @@ const Admin = () => {
             <div
               role="menu"
               className={`absolute right-0 top-full w-52 origin-top-right pt-2 transition-all duration-200 sm:w-56 ${showUserMenu
-                ? "visible pointer-events-auto translate-y-0 opacity-100"
-                : "invisible pointer-events-none translate-y-2 opacity-0"
+                  ? "visible pointer-events-auto translate-y-0 opacity-100"
+                  : "invisible pointer-events-none translate-y-2 opacity-0"
                 }`}
             >
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
@@ -173,8 +171,7 @@ const Admin = () => {
 
                   <ChevronRight size={16} className="opacity-50" />
                 </button>
-              ))
-              }
+              ))}
             </div>
           </nav>
         </aside>
@@ -206,6 +203,7 @@ const Admin = () => {
                   Select a collection to manage its records and actions.
                 </p>
               </div>
+
               <div className="space-y-2.5">
                 {collections.map((item) => (
                   <Link
@@ -262,8 +260,7 @@ const Admin = () => {
                     </div>
                   </div>
                 </Link>
-              ))
-              }
+              ))}
             </section>
           </div>
         </div>
