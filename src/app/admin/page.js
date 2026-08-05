@@ -35,6 +35,7 @@ const Admin = () => {
 
       if (result.data.success) {
         setCollections(result.data.collection);
+        
       }
     } catch (error) {
       console.log(error);
