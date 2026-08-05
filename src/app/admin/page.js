@@ -22,15 +22,13 @@ const Admin = () => {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [collections, setCollections] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   const accountName = user
     ? `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-      "Administrator"
+    "Administrator"
     : "Administrator";
 
   const getCollections = async () => {
-    setLoading(true);
 
     try {
       const result = await axios.get("/api/dashbord", {
@@ -42,8 +40,6 @@ const Admin = () => {
       }
     } catch (error) {
       console.log(error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -110,19 +106,17 @@ const Admin = () => {
 
               <ChevronDown
                 size={15}
-                className={`shrink-0 text-blue-200 transition-transform duration-200 ${
-                  showUserMenu ? "rotate-180" : "rotate-0"
-                }`}
+                className={`shrink-0 text-blue-200 transition-transform duration-200 ${showUserMenu ? "rotate-180" : "rotate-0"
+                  }`}
               />
             </button>
 
             <div
               role="menu"
-              className={`absolute right-0 top-full w-52 origin-top-right pt-2 transition-all duration-200 sm:w-56 ${
-                showUserMenu
-                  ? "visible pointer-events-auto translate-y-0 opacity-100"
-                  : "invisible pointer-events-none translate-y-2 opacity-0"
-              }`}
+              className={`absolute right-0 top-full w-52 origin-top-right pt-2 transition-all duration-200 sm:w-56 ${showUserMenu
+                ? "visible pointer-events-auto translate-y-0 opacity-100"
+                : "invisible pointer-events-none translate-y-2 opacity-0"
+                }`}
             >
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
                 <Link
@@ -166,27 +160,21 @@ const Admin = () => {
             </p>
 
             <div className="space-y-1.5">
-              {loading ? (
-                <div className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-blue-100">
-                  <LoaderCircle size={19} className="animate-spin" />
-                  Loading material
-                </div>
-              ) : (
-                collections.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => navigate.push(`/admin/${item.key}`)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-semibold text-blue-100 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Boxes size={21} />
+              {collections.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => navigate.push(`/admin/${item.key}`)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-semibold text-blue-100 transition hover:bg-white/10 hover:text-white"
+                >
+                  <Boxes size={21} />
 
-                    <span className="flex-1">{item.name}</span>
+                  <span className="flex-1">{item.name}</span>
 
-                    <ChevronRight size={16} className="opacity-50" />
-                  </button>
-                ))
-              )}
+                  <ChevronRight size={16} className="opacity-50" />
+                </button>
+              ))
+              }
             </div>
           </nav>
         </aside>
@@ -218,78 +206,64 @@ const Admin = () => {
                   Select a collection to manage its records and actions.
                 </p>
               </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-8 text-sm font-semibold text-blue-700 shadow-sm">
-                  <LoaderCircle size={20} className="animate-spin" />
-                  Loading website material
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {collections.map((item) => (
-                    <Link
-                      key={item.key}
-                      href={`/admin/${item.key}`}
-                      className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition active:scale-[0.99]"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-                        <Boxes size={20} />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-slate-900">
-                          {item.name}
-                        </p>
-
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {item.count.toLocaleString()} records
-                        </p>
-                      </div>
-
-                      <ChevronRight
-                        size={18}
-                        className="shrink-0 text-slate-400"
-                      />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="mt-6 hidden gap-4 lg:grid lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {loading ? (
-                <div className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-12 text-sm font-semibold text-blue-700 shadow-sm">
-                  <LoaderCircle size={21} className="animate-spin" />
-                  Loading website material
-                </div>
-              ) : (
-                collections.map((item) => (
+              <div className="space-y-2.5">
+                {collections.map((item) => (
                   <Link
                     key={item.key}
                     href={`/admin/${item.key}`}
-                    className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:p-5"
+                    className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition active:scale-[0.99]"
                   >
-                    <div className="flex items-start justify-between gap-2 sm:gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-slate-500 sm:text-sm">
-                          {item.name}
-                        </p>
-
-                        <p className="mt-1.5 text-2xl font-bold tracking-tight text-slate-950 sm:mt-2 sm:text-3xl">
-                          {item.count.toLocaleString()}
-                        </p>
-                      </div>
-
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 sm:h-11 sm:w-11">
-                        <Boxes
-                          size={19}
-                          className="sm:h-[21px] sm:w-[21px]"
-                        />
-                      </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                      <Boxes size={20} />
                     </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-slate-900">
+                        {item.name}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {item.count.toLocaleString()} records
+                      </p>
+                    </div>
+
+                    <ChevronRight
+                      size={18}
+                      className="shrink-0 text-slate-400"
+                    />
                   </Link>
-                ))
-              )}
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-6 hidden gap-4 lg:grid lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {collections.map((item) => (
+                <Link
+                  key={item.key}
+                  href={`/admin/${item.key}`}
+                  className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:p-5"
+                >
+                  <div className="flex items-start justify-between gap-2 sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-slate-500 sm:text-sm">
+                        {item.name}
+                      </p>
+
+                      <p className="mt-1.5 text-2xl font-bold tracking-tight text-slate-950 sm:mt-2 sm:text-3xl">
+                        {item.count.toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 sm:h-11 sm:w-11">
+                      <Boxes
+                        size={19}
+                        className="sm:h-[21px] sm:w-[21px]"
+                      />
+                    </div>
+                  </div>
+                </Link>
+              ))
+              }
             </section>
           </div>
         </div>
