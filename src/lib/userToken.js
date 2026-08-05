@@ -1,19 +1,25 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
 
 const sendToken = (user, statusCode) => {
-    const token = user.jsonwebtoken()
-    const res = NextResponse.json({
-        success: true,
-        User: user,
-        token: token
-    }, { status: statusCode })
-    res.cookies.set("token", token, {
-        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        secure: true,
-        httpOnly: true,
-        sameSite: "lax"
-    })
-    return res
-}
+    const token = user.jsonwebtoken();
 
-export default sendToken
+    const response = NextResponse.json(
+        {
+            success: true,
+            User: user,
+            token,
+        },
+        { status: statusCode },
+    );
+
+    response.cookies.set("token", token, {
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        sameSite: "lax",
+    });
+
+    return response;
+};
+
+export default sendToken;

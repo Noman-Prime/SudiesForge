@@ -6,16 +6,26 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const POST = async (req) => {
-    const auth = await isAuthenticated(req);
+    const providedSecret = req.headers.get(
+        "x-dashboard-sync-secret",
+    );
 
-    if (!auth.user) {
-        return auth;
-    }
+    const isScheduledRequest =
+        providedSecret &&
+        providedSecret === process.env.DASHBOARD_SYNC_SECRET;
 
-    const admin = isAdmin("admin")(auth.user);
+    if (!isScheduledRequest) {
+        const auth = await isAuthenticated(req);
 
-    if (admin) {
-        return admin;
+        if (!auth.user) {
+            return auth;
+        }
+
+        const admin = isAdmin("admin")(auth.user);
+
+        if (admin) {
+            return admin;
+        }
     }
 
     try {
