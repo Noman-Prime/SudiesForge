@@ -88,8 +88,16 @@ const Admin = () => {
               }
               className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
-                {user?.firstname?.charAt(0) || "A"}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
+                {user?.profileimage?.url ? (
+                  <img
+                    src={user.profileimage.url}
+                    alt={accountName}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  user?.firstname?.charAt(0) || "A"
+                )}
               </div>
 
               <div className="min-w-0">
@@ -112,8 +120,8 @@ const Admin = () => {
             <div
               role="menu"
               className={`absolute right-0 top-full w-52 origin-top-right pt-2 transition-all duration-200 sm:w-56 ${showUserMenu
-                  ? "visible pointer-events-auto translate-y-0 opacity-100"
-                  : "invisible pointer-events-none translate-y-2 opacity-0"
+                ? "visible pointer-events-auto translate-y-0 opacity-100"
+                : "invisible pointer-events-none translate-y-2 opacity-0"
                 }`}
             >
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">

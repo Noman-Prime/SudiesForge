@@ -5,6 +5,7 @@ import axios from "axios";
 import {
     ArrowLeft,
     CalendarDays,
+    Camera,
     LockKeyhole,
     Mail,
     MapPin,
@@ -17,7 +18,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 const DetailCard = ({ icon: Icon, label, value }) => {
@@ -43,6 +44,10 @@ const DetailCard = ({ icon: Icon, label, value }) => {
 const User = () => {
     const navigate = useRouter();
     const { user, setUser } = useUser();
+
+    const imageInputRef = useRef(null);
+    const [image, setImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState("");
 
     const [isEditing, setIsEditing] = useState(false);
 
@@ -88,6 +93,72 @@ const User = () => {
         await update();
     };
 
+    const uploadImage = async () => {
+        if (!image) {
+            toast.error("Please select an image");
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append("image", image);
+
+            const upload = await axios.post(
+                "/api/user/profileimage",
+                formData,
+                { withCredentials: true },
+            );
+
+            if (upload.data.success) {
+                setUser(upload.data.user);
+                setImage(null);
+                setImagePreview("");
+
+                if (imageInputRef.current) {
+                    imageInputRef.current.value = "";
+                }
+
+                toast.success("Profile image updated");
+            }
+        } catch (error) {
+            toast.error(
+                error.response?.data?.message ||
+                "Profile image could not be updated",
+            );
+        }
+    };
+
+    const selectImage = (e) => {
+        const selectedImage = e.target.files?.[0];
+
+        if (!selectedImage) {
+            return;
+        }
+
+        if (!selectedImage.type.startsWith("image/")) {
+            toast.error("Please select a valid image");
+            e.target.value = "";
+            return;
+        }
+
+        if (selectedImage.size > 5 * 1024 * 1024) {
+            toast.error("Image must be smaller than 5 MB");
+            e.target.value = "";
+            return;
+        }
+
+        setImage(selectedImage);
+        setImagePreview(URL.createObjectURL(selectedImage));
+    };
+
+    useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
+
     useEffect(() => {
         const getUser = async () => {
             try {
@@ -124,6 +195,7 @@ const User = () => {
         : "";
 
     const profileImage = user?.profileimage?.url;
+    const displayedProfileImage = imagePreview || profileImage;
     const userInitial = user?.firstname?.charAt(0)?.toUpperCase() || "U";
     const accountRole = user?.role;
 
@@ -165,19 +237,39 @@ const User = () => {
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-4 lg:flex-col lg:items-start lg:gap-5">
-                                <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-white text-xl font-bold text-blue-700 shadow-lg sm:h-20 sm:w-20 lg:h-24 lg:w-24">
-                                    {profileImage ? (
-                                        <Image
-                                            src={profileImage}
-                                            alt={fullName || "User profile"}
-                                            width={96}
-                                            height={96}
-                                            unoptimized
-                                            className="h-full w-full object-cover"
-                                        />
-                                    ) : (
-                                        <span>{userInitial}</span>
-                                    )}
+                                <div className="group relative h-[72px] w-[72px] shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
+                                    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-4 border-white/20 bg-white text-xl font-bold text-blue-700 shadow-lg">
+                                        {displayedProfileImage ? (
+                                            <Image
+                                                src={displayedProfileImage}
+                                                alt={fullName || "User profile"}
+                                                width={96}
+                                                height={96}
+                                                unoptimized
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <span>{userInitial}</span>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        aria-label="Select a new profile image"
+                                        className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-slate-950/65 text-[9px] font-semibold text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                                    >
+                                        <Camera size={18} />
+                                        Update
+                                    </button>
+
+                                    <input
+                                        ref={imageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={selectImage}
+                                        className="hidden"
+                                    />
                                 </div>
 
                                 <div className="min-w-0">
@@ -194,6 +286,23 @@ const User = () => {
                                     </p>
                                 </div>
                             </div>
+
+                            {image && (
+                                <div className="mt-4 rounded-xl border border-white/15 bg-white/[0.1] p-3">
+                                    <p className="m-0 truncate text-[10px] text-blue-100">
+                                        {image.name}
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        onClick={uploadImage}
+                                        className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white px-3 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-50"
+                                    >
+                                        <Save size={15} />
+                                        Update image
+                                    </button>
+                                </div>
+                            )}
 
                             <p className="mb-0 mt-6 hidden text-[11px] leading-5 text-blue-100 lg:block">
                                 Keep your personal details accurate so your Studies Forge

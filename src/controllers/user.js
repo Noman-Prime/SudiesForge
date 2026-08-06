@@ -1,4 +1,5 @@
 import connect from "@/lib/db"
+import { deleteFile, uploadFile } from "@/lib/upload"
 import sendToken from "@/lib/userToken"
 import user from "@/models/user"
 import bcrypt from "bcryptjs"
@@ -188,6 +189,54 @@ export const updatePassword = async (req, id) => {
         }, { status: 200 })
     } catch (error) {
         console.log(error)
+        return NextResponse.json({
+            success: false,
+            message: "Something went wrong"
+        }, { status: 500 })
+    }
+}
+
+export const profileImage = async (req, id) => {
+    try {
+        await connect()
+        const formData = await req.formData()
+        const file = formData.get("image")
+        if (!file) {
+            return Response.json({
+                success: false,
+                message: "plz slect the Image"
+            }, { status: 400 })
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return Response.json({
+                success: false,
+                message: "Something went wrong"
+            }, { status: 400 })
+        }
+        const User = await user.findById(id)
+        if (!User) {
+            return NextResponse.json({
+                success: false,
+                message: "Plz login first"
+            }, { status: 401 })
+        }
+        const oldPublickId = User.profileimage?.public_id
+        if (oldPublickId) {
+            await deleteFile(oldPublickId, "image")
+        }
+        const upload = await uploadFile(file, `Studiesforge/user/profileImages/${User._id}`, "image")
+        User.profileimage = {
+            public_id: upload.public_id,
+            url: upload.secure_url
+        }
+        await User.save()
+        return NextResponse.json({
+            success: true,
+            message: "Image is uploaded",
+            user: User
+        }, { status: 200 })
+    } catch (error) {
+        console.log(error);
         return NextResponse.json({
             success: false,
             message: "Something went wrong"

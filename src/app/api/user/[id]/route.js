@@ -16,4 +16,3 @@ export const DELETE = async (req) => {
     }
     return deleteUser(auth.user._id)
 }
- 
