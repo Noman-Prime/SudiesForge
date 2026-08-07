@@ -59,7 +59,9 @@ const Create = () => {
     } catch (error) {
       console.log(error.response?.data?.message);
 
-      toast.error(error.response?.data?.message || "Event is not created");
+      toast.error(
+        error.response?.data?.message || "Event is not created",
+      );
     }
   };
 
@@ -97,8 +99,16 @@ const Create = () => {
               }
               className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
-                {user?.firstname?.charAt(0) || "A"}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
+                {user?.profileimage?.url ? (
+                  <img
+                    src={user.profileimage.url}
+                    alt={accountName}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  user?.firstname?.charAt(0) || "A"
+                )}
               </div>
 
               <div className="min-w-0">

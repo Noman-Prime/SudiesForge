@@ -111,13 +111,18 @@ export const updateUser = async (req, id) => {
 export const deleteUser = async (id) => {
     try {
         await connect()
-        const User = await user.findByIdAndDelete(id)
+        const User = await user.findById(id)
         if (!User) {
             return NextResponse.json({
                 success: false,
                 message: "No user is found"
             }, { status: 404 })
         }
+        const profileImage = User.profileimage?.public_id
+        if(profileImage){
+            await deleteFile(profileImage, "image")
+        }
+        await user.findByIdAndDelete(id)
         const res = NextResponse.json({
             success: true,
             message: "User is deleted"
