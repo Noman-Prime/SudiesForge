@@ -29,10 +29,6 @@ const sliderSchema = new mongoose.Schema({
             type: String
         }
     },
-    order: {
-        type: Number,
-        default: 0,
-    },
     active: {
         type: Boolean,
         default: true,

@@ -1,36 +1,62 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import connect from "@/lib/db";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
 export const deashbord = async () => {
     try {
-        const { env } = await getCloudflareContext({ async: true });
+        await connect();
 
-        if (!env.NAVIGATION_KV) {
-            throw new Error("NAVIGATION_KV binding is missing");
+        const database = mongoose.connection.db;
+
+        if (!database) {
+            throw new Error("Database connection is unavailable");
         }
 
-        const dashboard = await env.NAVIGATION_KV.get(
-            "dashboard",
-            "json",
-        );
+        const collectionList = await database
+            .listCollections({}, { nameOnly: true })
+            .toArray();
+
+        const collections = [];
+
+        for (const item of collectionList) {
+            if (item.name.startsWith("system.")) {
+                continue;
+            }
+
+            const count = await database
+                .collection(item.name)
+                .estimatedDocumentCount();
+
+            const name = item.name
+                .replace(/[-_]/g, " ")
+                .replace(/\b\w/g, (character) =>
+                    character.toUpperCase(),
+                );
+
+            collections.push({
+                key: item.name,
+                name,
+                count,
+            });
+        }
 
         return NextResponse.json(
             {
                 success: true,
-                collection: dashboard?.collections || [],
-                updatedAt: dashboard?.updatedAt || null,
+                collection: collections,
             },
             {
                 status: 200,
                 headers: {
-                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "Cache-Control":
+                        "no-store, no-cache, must-revalidate",
                     "CDN-Cache-Control": "no-store",
                     "Cloudflare-CDN-Cache-Control": "no-store",
                 },
             },
         );
     } catch (error) {
-        console.error("Dashboard KV read failed:", error);
+        console.error("Dashboard database read failed:", error);
 
         return NextResponse.json(
             {

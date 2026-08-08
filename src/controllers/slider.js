@@ -13,7 +13,6 @@ export const createSlider = async (req) => {
         const description = formData.get("description")
         const highlightedText = formData.get("highlightedText")
         const file = formData.get("image")
-        const order = formData.get("order")
         const active = formData.get("active")
         let upload = null
         if (type === "withImage") {
@@ -37,7 +36,6 @@ export const createSlider = async (req) => {
             heading,
             description,
             highlightedText,
-            order,
             active,
         }
         if (upload) {
@@ -76,7 +74,6 @@ export const updateSlider = async (req, id) => {
         const description = formData.get("description")
         const highlightedText = formData.get("highlightedText")
         const file = formData.get("image")
-        const order = formData.get("order")
         const active = formData.get("active")
         let upload = null
         const Slider = await slider.findById(id)
@@ -106,7 +103,6 @@ export const updateSlider = async (req, id) => {
             heading,
             description,
             highlightedText,
-            order,
             active,
         }
         if (upload) {

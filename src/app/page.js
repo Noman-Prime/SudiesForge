@@ -1,5 +1,6 @@
 import { EventProvider } from "@/context/EventContext"
 import Navbar from "./components/navbar"
+import Slider from "./components/slider"
 
 const Home = () => {
   return (
@@ -7,6 +8,7 @@ const Home = () => {
       <EventProvider >
         <Navbar />
       </EventProvider>
+      <Slider />
     </div>
   )
 }
