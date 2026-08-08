@@ -2,25 +2,30 @@ import handler from "./.open-next/worker.js";
 
 const runDashboardSynchronization = async (env) => {
     if (!env.DASHBOARD_SYNC_SECRET) {
-        throw new Error("DASHBOARD_SYNC_SECRET is missing");
+        throw new Error(
+            "DASHBOARD_SYNC_SECRET is missing",
+        );
     }
 
     if (!env.WORKER_SELF_REFERENCE) {
-        throw new Error("WORKER_SELF_REFERENCE binding is missing");
+        throw new Error(
+            "WORKER_SELF_REFERENCE binding is missing",
+        );
     }
 
-    const response = await env.WORKER_SELF_REFERENCE.fetch(
-        new Request(
-            "https://studiesforge.com/api/dashboard/sync",
-            {
-                method: "POST",
-                headers: {
-                    "x-dashboard-sync-secret":
-                        env.DASHBOARD_SYNC_SECRET,
+    const response =
+        await env.WORKER_SELF_REFERENCE.fetch(
+            new Request(
+                "https://studiesforge.com/api/dashboard/sync",
+                {
+                    method: "POST",
+                    headers: {
+                        "x-dashboard-sync-secret":
+                            env.DASHBOARD_SYNC_SECRET,
+                    },
                 },
-            },
-        ),
-    );
+            ),
+        );
 
     const result = await response.text();
 
@@ -31,7 +36,7 @@ const runDashboardSynchronization = async (env) => {
     }
 
     console.log(
-        "Scheduled dashboard synchronization completed",
+        "Scheduled dashboard synchronization completed:",
         result,
     );
 };
@@ -39,7 +44,9 @@ const runDashboardSynchronization = async (env) => {
 export default {
     fetch: handler.fetch,
 
-    async scheduled(event, env, ctx) {
-        ctx.waitUntil(runDashboardSynchronization(env));
+    async scheduled(_event, env, ctx) {
+        ctx.waitUntil(
+            runDashboardSynchronization(env),
+        );
     },
 };

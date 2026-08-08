@@ -1,69 +1,70 @@
-import connect from "@/lib/db";
-import mongoose from "mongoose";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+
+const noCacheHeaders = {
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    "CDN-Cache-Control": "no-store",
+    "Cloudflare-CDN-Cache-Control": "no-store",
+};
 
 export const deashbord = async () => {
     try {
-        await connect();
+        const { env } = await getCloudflareContext({
+            async: true,
+        });
 
-        const database = mongoose.connection.db;
-
-        if (!database) {
-            throw new Error("Database connection is unavailable");
+        if (!env.NAVIGATION_KV) {
+            throw new Error("NAVIGATION_KV binding is missing");
         }
 
-        const collectionList = await database
-            .listCollections({}, { nameOnly: true })
-            .toArray();
+        const dashboard = await env.NAVIGATION_KV.get(
+            "dashboard",
+            "json",
+        );
 
-        const collections = [];
-
-        for (const item of collectionList) {
-            if (item.name.startsWith("system.")) {
-                continue;
-            }
-
-            const count = await database
-                .collection(item.name)
-                .estimatedDocumentCount();
-
-            const name = item.name
-                .replace(/[-_]/g, " ")
-                .replace(/\b\w/g, (character) =>
-                    character.toUpperCase(),
-                );
-
-            collections.push({
-                key: item.name,
-                name,
-                count,
-            });
+        if (
+            !dashboard ||
+            !Array.isArray(dashboard.collections)
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Dashboard has not been synchronized",
+                    collection: [],
+                    updatedAt: null,
+                },
+                {
+                    status: 503,
+                    headers: noCacheHeaders,
+                },
+            );
         }
 
         return NextResponse.json(
             {
                 success: true,
-                collection: collections,
+                collection: dashboard.collections,
+                updatedAt: dashboard.updatedAt || null,
             },
             {
                 status: 200,
-                headers: {
-                    "Cache-Control":
-                        "no-store, no-cache, must-revalidate",
-                    "CDN-Cache-Control": "no-store",
-                    "Cloudflare-CDN-Cache-Control": "no-store",
-                },
+                headers: noCacheHeaders,
             },
         );
     } catch (error) {
-        console.error("Dashboard database read failed:", error);
+        console.error("Dashboard KV read failed:", error);
 
         return NextResponse.json(
             {
                 success: false,
                 message: "Dashboard could not be loaded",
+                collection: [],
+                updatedAt: null,
             },
-            { status: 500 },
+            {
+                status: 500,
+                headers: noCacheHeaders,
+            },
         );
     }
 };

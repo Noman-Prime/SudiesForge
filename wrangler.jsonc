@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "./custom-worker.js",
   "name": "sudiesforge",
   "compatibility_date": "2026-07-28",
   "compatibility_flags": [
@@ -25,6 +25,11 @@
   ],
   "images": {
     "binding": "IMAGES"
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
   },
   "observability": {
     "enabled": true
