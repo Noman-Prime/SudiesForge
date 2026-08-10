@@ -3,7 +3,6 @@ import { deleteFile, uploadFile } from "@/lib/upload"
 import sendToken from "@/lib/userToken"
 import user from "@/models/user"
 import bcrypt from "bcryptjs"
-import { flightRouterStateSchema } from "next/dist/server/app-render/types"
 import { NextResponse } from "next/server"
 
 
