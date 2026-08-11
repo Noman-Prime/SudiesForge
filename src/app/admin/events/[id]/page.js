@@ -13,6 +13,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+const toastOptions = {
+  autoClose: 3000,
+  pauseOnHover: false,
+  pauseOnFocusLoss: false,
+  closeOnClick: true,
+};
+
 const Update = () => {
   const { id } = useParams();
   const navigate = useRouter();
@@ -20,59 +27,140 @@ const Update = () => {
 
   const [name, setName] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isBusy = isUpdating || isDeleting;
 
   const accountName = user
-    ? `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-    "Administrator"
+    ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || "Administrator"
     : "Administrator";
 
-  const updateEvent = async () => {
+  const updateEvent = async (e) => {
+    e.preventDefault();
+
+    if (isLoadingEvent || isBusy) return;
+
+    const eventName = name.trim();
+
+    if (!eventName) {
+      toast.dismiss();
+      toast.error("Event name is required", toastOptions);
+      return;
+    }
+
+    setIsUpdating(true);
+
     try {
       const result = await axios.put(
         `/api/events/${id}`,
-        { name },
+        { name: eventName },
         { withCredentials: true },
       );
 
-      if (result.data.success) {
-        toast.success("Event is updated");
-        navigate.push("/admin/events");
+      if (!result.data?.success) {
+        toast.dismiss();
+        toast.error(
+          result.data?.message || "Event is not updated",
+          toastOptions,
+        );
+        return;
       }
+
+      setName(eventName);
+
+      toast.dismiss();
+      toast.success("Event is updated", toastOptions);
+
+      navigate.push("/admin/events");
     } catch (error) {
-      toast.error("Event is not updated");
+      toast.dismiss();
+      toast.error(
+        error.response?.data?.message ||
+        error.message ||
+        "Event is not updated",
+        toastOptions,
+      );
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const deleteEvent = async () => {
+    if (isLoadingEvent || isBusy) return;
+
+    setIsDeleting(true);
+
     try {
       const result = await axios.delete(`/api/events/${id}`, {
         withCredentials: true,
       });
 
-      if (result.data.success) {
-        toast.success("Event is deleted");
-        navigate.push("/admin/events");
+      if (!result.data?.success) {
+        toast.dismiss();
+        toast.error(
+          result.data?.message || "Event is not deleted",
+          toastOptions,
+        );
+        return;
       }
-    } catch (error) {
-      toast.error("Event is not deleted");
-    }
-  };
 
-  const current = async () => {
-    try {
-      const result = await axios.get(`/api/events/${id}`);
+      toast.dismiss();
+      toast.success("Event is deleted", toastOptions);
 
-      if (result.data.success) {
-        setName(result.data.event.name);
-      }
+      navigate.push("/admin/events");
     } catch (error) {
-      setName("");
+      toast.dismiss();
+      toast.error(
+        error.response?.data?.message ||
+        error.message ||
+        "Event is not deleted",
+        toastOptions,
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   useEffect(() => {
+    if (!id) return;
+
+    const current = async () => {
+      setIsLoadingEvent(true);
+
+      try {
+        const result = await axios.get(`/api/events/${id}`, {
+          withCredentials: true,
+        });
+
+        if (!result.data?.success || !result.data?.event) {
+          toast.dismiss();
+          toast.error(
+            result.data?.message || "Event could not be loaded",
+            toastOptions,
+          );
+          setName("");
+          return;
+        }
+
+        setName(result.data.event.name || "");
+      } catch (error) {
+        setName("");
+        toast.dismiss();
+        toast.error(
+          error.response?.data?.message ||
+          error.message ||
+          "Event could not be loaded",
+          toastOptions,
+        );
+      } finally {
+        setIsLoadingEvent(false);
+      }
+    };
+
     current();
-  }, []);
+  }, [id]);
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -103,9 +191,7 @@ const Update = () => {
               aria-label="Open admin account menu"
               aria-haspopup="menu"
               aria-expanded={showUserMenu}
-              onClick={() =>
-                setShowUserMenu((previousValue) => !previousValue)
-              }
+              onClick={() => setShowUserMenu((previousValue) => !previousValue)}
               className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
@@ -140,8 +226,8 @@ const Update = () => {
             <div
               role="menu"
               className={`absolute right-0 top-full w-52 origin-top-right pt-2 transition-all duration-200 sm:w-56 ${showUserMenu
-                ? "visible pointer-events-auto translate-y-0 opacity-100"
-                : "invisible pointer-events-none translate-y-2 opacity-0"
+                  ? "visible pointer-events-auto translate-y-0 opacity-100"
+                  : "invisible pointer-events-none translate-y-2 opacity-0"
                 }`}
             >
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
@@ -207,7 +293,7 @@ const Update = () => {
           </aside>
 
           <div className="flex items-center bg-white px-6 py-8 sm:px-8 md:px-10 md:py-10">
-            <div className="w-full">
+            <form className="w-full" onSubmit={updateEvent}>
               <div className="mb-6">
                 <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-600">
                   Selected event
@@ -237,10 +323,13 @@ const Update = () => {
                   name="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && updateEvent()}
-                  placeholder="Enter event name"
+                  placeholder={
+                    isLoadingEvent ? "Loading event..." : "Enter event name"
+                  }
                   autoComplete="off"
-                  className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  required
+                  disabled={isLoadingEvent || isBusy}
+                  className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
 
                 <p className="mb-0 mt-2 text-[10px] leading-4 text-slate-500">
@@ -259,20 +348,21 @@ const Update = () => {
                 <button
                   type="button"
                   onClick={deleteEvent}
-                  className="flex h-11 items-center justify-center rounded-lg bg-red-600 px-5 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100 active:scale-[0.99]"
+                  disabled={isLoadingEvent || isBusy}
+                  className="flex h-11 items-center justify-center rounded-lg bg-red-600 px-5 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Delete event
+                  {isDeleting ? "Deleting event..." : "Delete event"}
                 </button>
 
                 <button
-                  type="button"
-                  onClick={updateEvent}
-                  className="flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
+                  type="submit"
+                  disabled={isLoadingEvent || isBusy}
+                  className="flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Update event
+                  {isUpdating ? "Updating event..." : "Update event"}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </section>
       </main>

@@ -8,11 +8,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+const toastOptions = {
+    autoClose: 3000,
+    pauseOnHover: false,
+    pauseOnFocusLoss: false,
+    closeOnClick: true,
+};
+
 const CreateUser = () => {
     const { setUser } = useUser();
     const navigate = useRouter();
 
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [data, setData] = useState({
         firstname: "",
@@ -30,36 +38,62 @@ const CreateUser = () => {
         }));
     };
 
-    const signUp = async () => {
+    const signUp = async (e) => {
+        e.preventDefault();
+
+        if (isSubmitting) return;
+
+        const signupData = {
+            ...data,
+            firstname: data.firstname.trim(),
+            lastname: data.lastname.trim(),
+            email: data.email.trim().toLowerCase(),
+            contactnumber: data.contactnumber.trim(),
+            country: data.country.trim(),
+        };
+
+        setIsSubmitting(true);
+
         try {
-            const result = await axios.post("/api/user", data, {
+            const result = await axios.post("/api/user", signupData, {
                 withCredentials: true,
             });
 
-            if (result.data.success) {
-                setUser(result.data.User);
+            const registeredUser = result.data?.User || result.data?.user;
 
-                setData({
-                    firstname: "",
-                    lastname: "",
-                    email: "",
-                    password: "",
-                    contactnumber: "",
-                    country: "",
-                });
+            if (!result.data?.success || !registeredUser) {
+                toast.dismiss();
+                toast.error(result.data?.message || "Signup failed", toastOptions);
+                return;
+            }
 
-                toast.success("Account is Registered", {
-                    autoClose: 3000,
-                });
+            setUser(registeredUser);
 
-                if (result.data.User.role === "admin") {
-                    navigate.push("/admin");
-                } else {
-                    navigate.push("/");
-                }
+            setData({
+                firstname: "",
+                lastname: "",
+                email: "",
+                password: "",
+                contactnumber: "",
+                country: "",
+            });
+
+            toast.dismiss();
+            toast.success("Account is registered", toastOptions);
+
+            if (registeredUser.role === "admin") {
+                navigate.push("/admin");
+            } else {
+                navigate.push("/");
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || "Signup failed");
+            toast.dismiss();
+            toast.error(
+                error.response?.data?.message || error.message || "Signup failed",
+                toastOptions,
+            );
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -111,10 +145,7 @@ const CreateUser = () => {
                             </p>
                         </div>
 
-                        <form
-                            className="space-y-4"
-                            onSubmit={(e) => e.preventDefault()}
-                        >
+                        <form className="space-y-4" onSubmit={signUp}>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label
@@ -132,6 +163,7 @@ const CreateUser = () => {
                                         onChange={updateValue}
                                         placeholder="Enter first name"
                                         autoComplete="given-name"
+                                        required
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
                                 </div>
@@ -152,6 +184,7 @@ const CreateUser = () => {
                                         onChange={updateValue}
                                         placeholder="Enter last name"
                                         autoComplete="family-name"
+                                        required
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
                                 </div>
@@ -175,6 +208,7 @@ const CreateUser = () => {
                                     autoComplete="email"
                                     autoCapitalize="none"
                                     spellCheck={false}
+                                    required
                                     className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                 />
                             </div>
@@ -198,6 +232,7 @@ const CreateUser = () => {
                                         autoComplete="new-password"
                                         autoCapitalize="none"
                                         spellCheck={false}
+                                        required
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
 
@@ -211,11 +246,7 @@ const CreateUser = () => {
                                         }
                                         className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                     >
-                                        {showPassword ? (
-                                            <EyeOff size={17} />
-                                        ) : (
-                                            <Eye size={17} />
-                                        )}
+                                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                                     </button>
                                 </div>
 
@@ -243,6 +274,7 @@ const CreateUser = () => {
                                         inputMode="numeric"
                                         maxLength={11}
                                         autoComplete="tel"
+                                        required
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
                                 </div>
@@ -263,6 +295,7 @@ const CreateUser = () => {
                                         onChange={updateValue}
                                         placeholder="Enter country"
                                         autoComplete="country-name"
+                                        required
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
                                 </div>
@@ -287,11 +320,11 @@ const CreateUser = () => {
                             </p>
 
                             <button
-                                type="button"
-                                onClick={signUp}
-                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99]"
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="h-11 w-full rounded-lg bg-[#1260e8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                Create free account
+                                {isSubmitting ? "Creating account..." : "Create free account"}
                             </button>
                         </form>
 
@@ -330,9 +363,7 @@ const CreateUser = () => {
                                     N
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">
-                                    Notes
-                                </h3>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">Notes</h3>
 
                                 <p className="mt-1 text-[9px] leading-4 text-slate-400">
                                     Structured study notes
@@ -358,9 +389,7 @@ const CreateUser = () => {
                                     ?
                                 </div>
 
-                                <h3 className="text-xs font-semibold text-[#071a4a]">
-                                    MCQs
-                                </h3>
+                                <h3 className="text-xs font-semibold text-[#071a4a]">MCQs</h3>
 
                                 <p className="mt-1 text-[9px] leading-4 text-slate-400">
                                     Practice questions

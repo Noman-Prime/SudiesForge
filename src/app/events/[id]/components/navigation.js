@@ -5,19 +5,16 @@ import {
     BookOpen,
     Home,
 } from "lucide-react";
-import {
-    useParams,
-    usePathname,
-    useRouter,
-} from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const EventNavigation = () => {
     const { id } = useParams();
-    const pathname = usePathname();
-    const navigate = useRouter();
 
     const [eventName, setEventName] = useState("");
+    const [activeSection, setActiveSection] =
+        useState("overview");
+
     const [navigation, setNavigation] = useState([
         {
             key: "overview",
@@ -26,12 +23,6 @@ const EventNavigation = () => {
         },
     ]);
 
-    const currentPath = pathname
-        .split("/")
-        .filter(Boolean)[2];
-
-    const activeSection = currentPath || "overview";
-
     const getNavigation = async () => {
         try {
             const result = await axios.get(
@@ -39,15 +30,18 @@ const EventNavigation = () => {
             );
 
             if (result.data.success) {
-                setEventName(result.data.eventName);
+                setEventName(
+                    result.data.eventName || "",
+                );
 
-                const collections =
-                    result.data.collection.map((item) => ({
-                        key: item.key,
-                        name: item.name,
-                        count: item.count,
-                        icon: BookOpen,
-                    }));
+                const collections = (
+                    result.data.collection || []
+                ).map((item) => ({
+                    key: item.key,
+                    name: item.name,
+                    count: item.count,
+                    icon: BookOpen,
+                }));
 
                 setNavigation([
                     {
@@ -64,12 +58,33 @@ const EventNavigation = () => {
     };
 
     const changeSection = (section) => {
-        if (section === "overview") {
-            navigate.push(`/events/${id}`);
+        const targetSection =
+            document.getElementById(section);
+
+        if (!targetSection) {
+            console.log(
+                `Section with id "${section}" was not found`,
+            );
             return;
         }
 
-        navigate.push(`/events/${id}/${section}`);
+        setActiveSection(section);
+
+        const nextUrl =
+            section === "overview"
+                ? `/events/${id}`
+                : `/events/${id}#${section}`;
+
+        window.history.replaceState(
+            null,
+            "",
+            nextUrl,
+        );
+
+        targetSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
     };
 
     useEffect(() => {
@@ -77,6 +92,63 @@ const EventNavigation = () => {
             getNavigation();
         }
     }, [id]);
+
+    // Open the correct section when the page contains a hash.
+    useEffect(() => {
+        const hash = window.location.hash.replace(
+            "#",
+            "",
+        );
+
+        if (!hash) return;
+
+        const targetSection =
+            document.getElementById(hash);
+
+        if (targetSection) {
+            setActiveSection(hash);
+
+            targetSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }
+    }, [navigation]);
+
+    // Update the active navigation item while scrolling.
+    useEffect(() => {
+        const sections = navigation
+            .map((item) =>
+                document.getElementById(item.key),
+            )
+            .filter(Boolean);
+
+        if (sections.length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visibleSection = entries.find(
+                    (entry) => entry.isIntersecting,
+                );
+
+                if (visibleSection) {
+                    setActiveSection(
+                        visibleSection.target.id,
+                    );
+                }
+            },
+            {
+                rootMargin: "-100px 0px -65% 0px",
+                threshold: 0,
+            },
+        );
+
+        sections.forEach((section) => {
+            observer.observe(section);
+        });
+
+        return () => observer.disconnect();
+    }, [navigation]);
 
     return (
         <>
@@ -93,7 +165,9 @@ const EventNavigation = () => {
                                 key={item.key}
                                 type="button"
                                 onClick={() =>
-                                    changeSection(item.key)
+                                    changeSection(
+                                        item.key,
+                                    )
                                 }
                                 aria-pressed={isActive}
                                 className={`flex min-w-20 flex-col items-center justify-center gap-1.5 border-b-2 px-3 py-3 text-[10px] font-bold transition ${isActive
@@ -121,7 +195,9 @@ const EventNavigation = () => {
                     </p>
 
                     <h2 className="mt-1 text-base font-extrabold text-[#071a4a]">
-                        {eventName} Resources
+                        {eventName
+                            ? `${eventName} Resources`
+                            : "Event Resources"}
                     </h2>
                 </div>
 
@@ -136,7 +212,9 @@ const EventNavigation = () => {
                                 key={item.key}
                                 type="button"
                                 onClick={() =>
-                                    changeSection(item.key)
+                                    changeSection(
+                                        item.key,
+                                    )
                                 }
                                 aria-pressed={isActive}
                                 className={`flex w-full items-center gap-3 rounded-xl border-l-[3px] px-3.5 py-3 text-left text-sm font-semibold transition ${isActive
@@ -154,11 +232,12 @@ const EventNavigation = () => {
                                     {item.name}
                                 </span>
 
-                                {item.count !== undefined && (
-                                    <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-600">
-                                        {item.count}
-                                    </span>
-                                )}
+                                {item.count !==
+                                    undefined && (
+                                        <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-600">
+                                            {item.count}
+                                        </span>
+                                    )}
                             </button>
                         );
                     })}

@@ -24,15 +24,25 @@ const Events = () => {
                             <EventNavigation />
                         </div>
 
-                        {/* <div className="mt-5 space-y-5 lg:mt-0">
-                            <EventOverview />
+                        <div className="mt-5 space-y-5 lg:mt-0">
+                            <div
+                                id="overview"
+                                className="scroll-mt-24"
+                            >
+                                <EventOverview />
+                            </div>
 
                             <EventSubjects />
 
-                            <EventMaterials />
+                            <div
+                                id="materials"
+                                className="scroll-mt-24"
+                            >
+                                <EventMaterials />
+                            </div>
 
                             <EventStartBanner />
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             </main>

@@ -2,6 +2,7 @@ import connect from "@/lib/db"
 import { deleteFile, uploadFile } from "@/lib/upload"
 import subject from "@/models/subjects"
 import { NextResponse } from "next/server"
+import Event from "@/models/event";
 
 export const createSubject = async (req) => {
     try {
@@ -39,7 +40,7 @@ export const updateSubject = async (req, id) => {
             }, { status: 400 })
         }
         return NextResponse.json({
-            success: truee,
+            success: true,
             message: "Subject is updated",
             subject: Subject
         }, { status: 200 })
@@ -79,7 +80,11 @@ export const getSubject = async (req, id) => {
 export const getAllSubject = async (req) => {
     try {
         await connect()
-        const Subjects = await subject.find().populate("event")
+        const Subjects = await subject.find().populate({
+            path: "event",
+            model: Event,
+            select: "name",
+        })
         if (!Subjects || Subjects.lenght === 0) {
             return NextResponse.json({
                 success: false,
@@ -89,6 +94,30 @@ export const getAllSubject = async (req) => {
         return NextResponse.json({
             success: true,
             message: "Subjects found",
+            subjects: Subjects
+        }, { status: 200 })
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({
+            success: false,
+            message: "Something went wrong"
+        }, { status: 500 })
+    }
+}
+
+export const subjectByEvent = async (req, id) => {
+    try {
+        await connect()
+        const Subjects = await subject.find({ event: id })
+        if (!Subjects || Subjects.length === 0) {
+            return NextResponse.json({
+                success: false,
+                message: "No Subjects are found"
+            }, { status: 400 })
+        }
+        return NextResponse.json({
+            success: true,
+            message: "Subjects are found",
             subjects: Subjects
         }, { status: 200 })
     } catch (error) {

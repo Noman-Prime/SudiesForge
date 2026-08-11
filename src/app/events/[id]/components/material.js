@@ -1,3 +1,6 @@
+"use client";
+
+import axios from "axios";
 import Link from "next/link";
 import {
     ArrowRight,
@@ -7,6 +10,8 @@ import {
     ListChecks,
     PlayCircle,
 } from "lucide-react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const materialStyles = {
     notes: {
@@ -24,10 +29,20 @@ const materialStyles = {
         icon: ListChecks,
         iconStyle: "bg-violet-50 text-violet-600",
     },
+    mocktests: {
+        label: "Mock Test",
+        icon: ClipboardCheck,
+        iconStyle: "bg-blue-50 text-blue-600",
+    },
     "mock-tests": {
         label: "Mock Test",
         icon: ClipboardCheck,
         iconStyle: "bg-blue-50 text-blue-600",
+    },
+    pastpapers: {
+        label: "Past Paper",
+        icon: FileClock,
+        iconStyle: "bg-amber-50 text-amber-600",
     },
     "past-papers": {
         label: "Past Paper",
@@ -36,42 +51,74 @@ const materialStyles = {
     },
 };
 
-const sampleMaterials = [
-    {
-        _id: "biology-notes-1",
-        title: "Cell Structure and Functions",
-        type: "notes",
-        subject: "Biology",
-        updatedAt: "May 11, 2026",
-    },
-    {
-        _id: "chemistry-lecture-1",
-        title: "Chemical Bonding – Full Lecture",
-        type: "lectures",
-        subject: "Chemistry",
-        updatedAt: "May 10, 2026",
-    },
-    {
-        _id: "physics-mcqs-1",
-        title: "Laws of Motion MCQs",
-        type: "mcqs",
-        subject: "Physics",
-        updatedAt: "May 9, 2026",
-    },
-    {
-        _id: "mdcat-mock-test-1",
-        title: "MDCAT Full-Length Mock Test 1",
-        type: "mock-tests",
-        subject: "MDCAT",
-        updatedAt: "May 8, 2026",
-    },
-];
+const EventMaterials = () => {
+    const { id } = useParams();
 
-const EventMaterials = ({
-    eventId = "mdcat",
-    eventName = "MDCAT",
-    materials = sampleMaterials,
-}) => {
+    const [eventName, setEventName] = useState("");
+    const [materials, setMaterials] = useState([]);
+
+    const getMaterials = async () => {
+        try {
+            const result = await axios.get(
+                `/api/events/${id}/materials`,
+            );
+
+            if (result.data.success) {
+                setEventName(
+                    result.data.eventName || "",
+                );
+
+                setMaterials(
+                    result.data.materials || [],
+                );
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    const getStyle = (type) => {
+        return materialStyles[type] || {
+            label: type
+                ?.replace(/[-_]/g, " ")
+                .replace(/\b\w/g, (character) =>
+                    character.toUpperCase(),
+                ) || "Material",
+            icon: FileText,
+            iconStyle: "bg-blue-50 text-blue-600",
+        };
+    };
+
+    const getSubjectName = (material) => {
+        return (
+            material.subject?.name ||
+            material.subjectName ||
+            "General"
+        );
+    };
+
+    const formatDate = (date) => {
+        if (!date) {
+            return "Recently added";
+        }
+
+        return new Intl.DateTimeFormat("en-PK", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }).format(new Date(date));
+    };
+
+    useEffect(() => {
+        if (id) {
+            getMaterials();
+        }
+    }, [id]);
+
+    if (materials.length === 0) {
+        return null;
+    }
+
     return (
         <section
             id="materials"
@@ -87,33 +134,34 @@ const EventMaterials = ({
                 </h2>
 
                 <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-xs">
-                    Access recently added notes, lectures and practice
-                    resources.
+                    Access recently added notes, lectures and
+                    practice resources.
                 </p>
             </div>
 
             {/* Mobile view */}
             <div className="space-y-3 bg-slate-50/60 p-3 md:hidden">
                 {materials.map((material) => {
-                    const style =
-                        materialStyles[material.type] ||
-                        materialStyles.notes;
-
+                    const style = getStyle(material.type);
                     const Icon = style.icon;
+
+                    const href =
+                        material.href ||
+                        `/events/${id}/${material.type}/${material._id}`;
 
                     return (
                         <Link
-                            key={material._id}
-                            href={
-                                material.href ||
-                                `/events/${eventId}/${material.type}/${material._id}`
-                            }
+                            key={`${material.type}-${material._id}`}
+                            href={href}
                             className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-blue-200 hover:shadow-md"
                         >
                             <div
                                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style.iconStyle}`}
                             >
-                                <Icon size={19} strokeWidth={1.9} />
+                                <Icon
+                                    size={19}
+                                    strokeWidth={1.9}
+                                />
                             </div>
 
                             <div className="min-w-0 flex-1">
@@ -122,18 +170,21 @@ const EventMaterials = ({
                                 </span>
 
                                 <h3 className="mt-0.5 truncate text-xs font-extrabold text-[#071a4a]">
-                                    {material.title}
+                                    {material.title ||
+                                        material.name}
                                 </h3>
 
                                 <div className="mt-1 flex items-center gap-2 text-[9px] text-slate-500">
                                     <span className="truncate">
-                                        {material.subject}
+                                        {getSubjectName(material)}
                                     </span>
 
                                     <span className="h-1 w-1 shrink-0 rounded-full bg-slate-300" />
 
                                     <span className="shrink-0">
-                                        {material.updatedAt}
+                                        {formatDate(
+                                            material.updatedAt,
+                                        )}
                                     </span>
                                 </div>
                             </div>
@@ -155,34 +206,38 @@ const EventMaterials = ({
                         <span>Type</span>
                         <span>Subject</span>
                         <span>Updated</span>
-                        <span className="text-right">Open</span>
+                        <span className="text-right">
+                            Open
+                        </span>
                     </div>
 
                     {materials.map((material) => {
-                        const style =
-                            materialStyles[material.type] ||
-                            materialStyles.notes;
-
+                        const style = getStyle(material.type);
                         const Icon = style.icon;
+
+                        const href =
+                            material.href ||
+                            `/events/${id}/${material.type}/${material._id}`;
 
                         return (
                             <Link
-                                key={material._id}
-                                href={
-                                    material.href ||
-                                    `/events/${eventId}/${material.type}/${material._id}`
-                                }
+                                key={`${material.type}-${material._id}`}
+                                href={href}
                                 className="group grid grid-cols-[minmax(260px,1.6fr)_0.7fr_0.7fr_0.8fr_70px] items-center border-t border-slate-200 px-4 py-3 transition hover:bg-blue-50/50"
                             >
                                 <div className="flex min-w-0 items-center gap-3">
                                     <div
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.iconStyle}`}
                                     >
-                                        <Icon size={17} strokeWidth={1.9} />
+                                        <Icon
+                                            size={17}
+                                            strokeWidth={1.9}
+                                        />
                                     </div>
 
                                     <span className="truncate text-xs font-bold text-[#071a4a]">
-                                        {material.title}
+                                        {material.title ||
+                                            material.name}
                                     </span>
                                 </div>
 
@@ -190,12 +245,14 @@ const EventMaterials = ({
                                     {style.label}
                                 </span>
 
-                                <span className="text-[11px] text-slate-600">
-                                    {material.subject}
+                                <span className="truncate text-[11px] text-slate-600">
+                                    {getSubjectName(material)}
                                 </span>
 
                                 <span className="text-[11px] text-slate-500">
-                                    {material.updatedAt}
+                                    {formatDate(
+                                        material.updatedAt,
+                                    )}
                                 </span>
 
                                 <div className="flex justify-end">

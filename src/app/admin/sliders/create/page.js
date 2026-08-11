@@ -10,6 +10,7 @@ import {
     GraduationCap,
     ImagePlus,
     LayoutTemplate,
+    LoaderCircle,
     Settings2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -24,6 +25,8 @@ const Create = () => {
         useState(false);
     const [imagePreview, setImagePreview] =
         useState("");
+    const [isCreating, setIsCreating] =
+        useState(false);
 
     const [data, setData] = useState({
         type: "",
@@ -87,6 +90,10 @@ const Create = () => {
     }, [imagePreview]);
 
     const createSlider = async () => {
+        if (isCreating) return;
+
+        setIsCreating(true);
+
         try {
             const result = await axios.postForm(
                 "/api/slider",
@@ -119,6 +126,8 @@ const Create = () => {
                 "Slider is not created",
                 { autoClose: 3000 },
             );
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -548,9 +557,19 @@ const Create = () => {
                             <button
                                 type="button"
                                 onClick={createSlider}
-                                className="flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                                disabled={isCreating}
+                                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-blue-400 disabled:opacity-70"
                             >
-                                Create slider
+                                {isCreating && (
+                                    <LoaderCircle
+                                        size={18}
+                                        className="animate-spin"
+                                    />
+                                )}
+
+                                {isCreating
+                                    ? "Creating..."
+                                    : "Create slider"}
                             </button>
                         </div>
                     </section>

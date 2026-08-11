@@ -8,6 +8,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+const toastOptions = {
+    autoClose: 3000,
+};
+
 const Login = () => {
     const { setUser } = useUser();
     const navigate = useRouter();
@@ -33,22 +37,35 @@ const Login = () => {
         };
 
         if (!loginData.email || !loginData.password) {
-            toast.error("Please enter email and password");
+            toast.error(
+                "Please enter email and password",
+                toastOptions,
+            );
             return;
         }
 
         try {
-            const result = await axios.post("/api/login", loginData, {
-                withCredentials: true,
-            });
+            const result = await axios.post(
+                "/api/login",
+                loginData,
+                {
+                    withCredentials: true,
+                },
+            );
 
             if (!result.data.success) {
-                toast.error(result.data.message || "Login failed");
+                toast.error(
+                    result.data.message || "Login failed",
+                    toastOptions,
+                );
                 return;
             }
 
             if (!result.data.User) {
-                toast.error("User was not returned by login API");
+                toast.error(
+                    "User was not returned by login API",
+                    toastOptions,
+                );
                 return;
             }
 
@@ -63,9 +80,10 @@ const Login = () => {
 
             setShowPassword(false);
 
-            toast.success("Welcome To Studies Forge", {
-                autoClose: 3000,
-            });
+            toast.success(
+                "Welcome To Studies Forge",
+                toastOptions,
+            );
 
             if (loggedUser.role === "admin") {
                 navigate.push("/admin");
@@ -73,9 +91,15 @@ const Login = () => {
                 navigate.push("/");
             }
         } catch (error) {
-            console.log(error.response?.data || error.message);
+            console.log(
+                error.response?.data || error.message,
+            );
 
-            toast.error(error.response?.data?.message || "Login failed");
+            toast.error(
+                error.response?.data?.message ||
+                "Login failed",
+                toastOptions,
+            );
         }
     };
 
@@ -122,7 +146,8 @@ const Login = () => {
                             </h1>
 
                             <p className="mb-0 mt-1.5 max-w-md text-[12px] font-medium leading-5 text-slate-600">
-                                Sign in to continue learning and access your study resources.
+                                Sign in to continue learning and access
+                                your study resources.
                             </p>
                         </div>
 
@@ -169,7 +194,11 @@ const Login = () => {
                                 <div className="relative">
                                     <input
                                         id="password"
-                                        type={showPassword ? "text" : "password"}
+                                        type={
+                                            showPassword
+                                                ? "text"
+                                                : "password"
+                                        }
                                         name="password"
                                         value={data.password}
                                         onChange={updateValue}
@@ -177,17 +206,27 @@ const Login = () => {
                                         autoComplete="current-password"
                                         autoCapitalize="none"
                                         spellCheck={false}
-                                        onKeyDown={(e) => e.key === "Enter" && getLogin()}
+                                        onKeyDown={(e) =>
+                                            e.key === "Enter" &&
+                                            getLogin()
+                                        }
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-3.5 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-xs placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                     />
 
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setShowPassword((previousValue) => !previousValue)
+                                            setShowPassword(
+                                                (
+                                                    previousValue,
+                                                ) =>
+                                                    !previousValue,
+                                            )
                                         }
                                         aria-label={
-                                            showPassword ? "Hide password" : "Show password"
+                                            showPassword
+                                                ? "Hide password"
+                                                : "Show password"
                                         }
                                         className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                     >
@@ -234,8 +273,8 @@ const Login = () => {
                             </h2>
 
                             <p className="mb-0 mt-2 text-[11px] font-medium leading-5 text-slate-600">
-                                Sign in to access your notes, lectures, MCQs and exam
-                                preparation.
+                                Sign in to access your notes, lectures,
+                                MCQs and exam preparation.
                             </p>
                         </div>
 
@@ -303,7 +342,8 @@ const Login = () => {
                             </h3>
 
                             <p className="mb-0 mt-1 text-[10px] leading-4 text-blue-100">
-                                No subscriptions and no hidden charges.
+                                No subscriptions and no hidden
+                                charges.
                             </p>
                         </div>
                     </aside>

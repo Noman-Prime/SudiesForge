@@ -12,8 +12,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
+
+const toastOptions = {
+  autoClose: 3000,
+  pauseOnHover: false,
+  pauseOnFocusLoss: false,
+  closeOnClick: true,
+};
 
 const Create = () => {
   const navigate = useRouter();
@@ -22,12 +28,11 @@ const Create = () => {
   const [data, setData] = useState({
     name: "",
   });
-
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const accountName = user
-    ? `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-    "Administrator"
+    ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || "Administrator"
     : "Administrator";
 
   const fillData = (e) => {
@@ -37,31 +42,53 @@ const Create = () => {
     }));
   };
 
-  const sendData = async () => {
-    if (!data.name.trim()) {
-      toast.error("Event name is required");
+  const sendData = async (e) => {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    const eventName = data.name.trim();
+
+    if (!eventName) {
+      toast.dismiss();
+      toast.error("Event name is required", toastOptions);
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      const result = await axios.post("/api/events", data);
-
-      if (result.data.success) {
-        toast.success("Event is created");
-        console.log(result.data);
-
-        navigate.push("/admin/events");
-
-        setData({
-          name: "",
-        });
-      }
-    } catch (error) {
-      console.log(error.response?.data?.message);
-
-      toast.error(
-        error.response?.data?.message || "Event is not created",
+      const result = await axios.post(
+        "/api/events",
+        { name: eventName },
+        { withCredentials: true },
       );
+
+      if (!result.data?.success) {
+        toast.dismiss();
+        toast.error(
+          result.data?.message || "Event is not created",
+          toastOptions,
+        );
+        return;
+      }
+
+      setData({ name: "" });
+
+      toast.dismiss();
+      toast.success("Event is created", toastOptions);
+
+      navigate.push("/admin/events");
+    } catch (error) {
+      toast.dismiss();
+      toast.error(
+        error.response?.data?.message ||
+        error.message ||
+        "Event is not created",
+        toastOptions,
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -94,9 +121,7 @@ const Create = () => {
               aria-label="Open admin account menu"
               aria-haspopup="menu"
               aria-expanded={showUserMenu}
-              onClick={() =>
-                setShowUserMenu((previousValue) => !previousValue)
-              }
+              onClick={() => setShowUserMenu((previousValue) => !previousValue)}
               className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
@@ -208,7 +233,7 @@ const Create = () => {
           </section>
 
           <section className="flex items-center bg-white px-6 py-8 sm:px-8 md:px-10 md:py-10">
-            <div className="w-full">
+            <form className="w-full" onSubmit={sendData}>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
                 New event
               </p>
@@ -236,7 +261,9 @@ const Create = () => {
                   value={data.name}
                   onChange={fillData}
                   placeholder="For example: MDCAT"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  required
+                  disabled={isSubmitting}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
 
                 <p className="mt-2 text-xs text-slate-500">
@@ -245,17 +272,15 @@ const Create = () => {
               </div>
 
               <button
-                type="button"
-                onClick={sendData}
-                className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create event
+                {isSubmitting ? "Creating event..." : "Create event"}
               </button>
-            </div>
+            </form>
           </section>
         </div>
-
-        <ToastContainer position="top-right" />
       </main>
     </div>
   );

@@ -17,6 +17,7 @@ const sendToken = (user, statusCode) => {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         sameSite: "lax",
+        path: "/",
     });
 
     return response;

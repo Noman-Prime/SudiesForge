@@ -1,25 +1,87 @@
+"use client";
+
+import axios from "axios";
 import {
     BookOpen,
     GraduationCap,
     LibraryBig,
     Target,
 } from "lucide-react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const sampleOverview = {
-    examType: "Medical Admission Test",
-    subjectCount: 4,
-    subjects:
-        "Biology, Chemistry, Physics and English",
-    materials:
-        "Notes, Lectures, MCQs, Mock Tests and Past Papers",
-    preparation:
-        "Complete syllabus coverage with learning and practice material.",
-};
+const EventOverview = () => {
+    const { id } = useParams();
 
-const EventOverview = ({
-    eventName = "MDCAT",
-    overview = sampleOverview,
-}) => {
+    const [eventName, setEventName] = useState("");
+    const [subjects, setSubjects] = useState([]);
+    const [materials, setMaterials] = useState([]);
+
+    const getOverview = async () => {
+        try {
+            const navigationResult = await axios.get(
+                `/api/events/${id}/navigation`,
+            );
+
+            const subjectResult = await axios.get(
+                "/api/subject",
+            );
+
+            if (navigationResult.data.success) {
+                setEventName(
+                    navigationResult.data.eventName,
+                );
+
+                setMaterials(
+                    navigationResult.data.collection || [],
+                );
+            }
+
+            if (subjectResult.data.success) {
+                const eventSubjects = (
+                    subjectResult.data.subjects || []
+                ).filter((subject) => {
+                    const eventId =
+                        subject.event?._id ||
+                        subject.event;
+
+                    return String(eventId) === String(id);
+                });
+
+                setSubjects(eventSubjects);
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    useEffect(() => {
+        if (id) {
+            getOverview();
+        }
+    }, [id]);
+
+    if (!eventName) {
+        return null;
+    }
+
+    const subjectNames = subjects
+        .map((subject) => subject.name)
+        .join(", ");
+
+    const studyMaterials = materials.filter(
+        (item) => item.key !== "subjects",
+    );
+
+    const materialNames = studyMaterials
+        .map((item) => item.name)
+        .join(", ");
+
+    const resourceCount = studyMaterials.reduce(
+        (total, item) => total + item.count,
+        0,
+    );
+
     return (
         <section
             id="overview"
@@ -35,7 +97,7 @@ const EventOverview = ({
                 </h2>
             </div>
 
-            <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
+            <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-y-0">
                 <article className="p-4 sm:p-5">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                         <GraduationCap
@@ -45,11 +107,11 @@ const EventOverview = ({
                     </div>
 
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
-                        Exam type
+                        Exam
                     </p>
 
                     <h3 className="mt-1 text-sm font-extrabold text-[#071a4a]">
-                        {overview.examType}
+                        {eventName}
                     </h3>
                 </article>
 
@@ -66,11 +128,12 @@ const EventOverview = ({
                     </p>
 
                     <h3 className="mt-1 text-sm font-extrabold text-[#071a4a]">
-                        {overview.subjectCount} Subjects
+                        {subjects.length} Subjects
                     </h3>
 
                     <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                        {overview.subjects}
+                        {subjectNames ||
+                            "Subjects will be available soon"}
                     </p>
                 </article>
 
@@ -87,11 +150,12 @@ const EventOverview = ({
                     </p>
 
                     <h3 className="mt-1 text-sm font-extrabold text-[#071a4a]">
-                        Complete Resources
+                        {resourceCount} Resources
                     </h3>
 
                     <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                        {overview.materials}
+                        {materialNames ||
+                            "Study material will be available soon"}
                     </p>
                 </article>
 
@@ -112,7 +176,8 @@ const EventOverview = ({
                     </h3>
 
                     <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                        {overview.preparation}
+                        Explore the available {eventName} subjects
+                        and preparation material.
                     </p>
                 </article>
             </div>
