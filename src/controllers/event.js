@@ -1,5 +1,4 @@
 import connect from "@/lib/db";
-import syncNavigation from "@/lib/syncNavigation";
 import event from "@/models/event";
 import subject from "@/models/subjects";
 import { NextResponse } from "next/server";
@@ -9,7 +8,6 @@ export const createEvent = async (req) => {
         await connect()
         const body = await req.json();
         const Event = await event.create(body);
-        await syncNavigation();
         return NextResponse.json({
             success: true,
             message: "Event is created",
@@ -84,7 +82,6 @@ export const updateEvent = async (req, id) => {
                 message: "No Event is found"
             }, { status: 404 })
         }
-        await syncNavigation()
         return NextResponse.json({
             success: true,
             event: Event
@@ -130,7 +127,6 @@ export const deleteEvent = async (id) => {
         }
 
         await Event.deleteOne();
-        await syncNavigation();
 
         return NextResponse.json(
             {

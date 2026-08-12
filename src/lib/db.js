@@ -1,31 +1,25 @@
 import mongoose from "mongoose";
 
 const connect = async () => {
-    if (!process.env.DB_URL) {
-        throw new Error(
-            "DB_URL environment variable is missing",
-        );
-    }
-
     try {
+        if (!process.env.DB_URL) {
+            throw new Error("DB_URL is missing");
+        }
+
         const connection = await mongoose.connect(
             process.env.DB_URL,
             {
-                maxPoolSize: 1,
-                minPoolSize: 0,
-                maxIdleTimeMS: 10000,
+                maxPoolSize: 10,
                 serverSelectionTimeoutMS: 5000,
-                connectTimeoutMS: 5000,
-                socketTimeoutMS: 10000,
             },
         );
 
-        console.log("Database is active");
+        console.log("Database is connected");
 
         return connection;
     } catch (error) {
         console.error(
-            "Database connection failed:",
+            "Database is not connected:",
             error,
         );
 

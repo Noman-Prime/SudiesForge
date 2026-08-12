@@ -1,50 +1,59 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import connect from "@/lib/db";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
 const noCacheHeaders = {
-    "Cache-Control": "no-store, no-cache, must-revalidate",
-    "CDN-Cache-Control": "no-store",
-    "Cloudflare-CDN-Cache-Control": "no-store",
+    "Cache-Control":
+        "no-store, no-cache, must-revalidate",
 };
 
 export const deashbord = async () => {
     try {
-        const { env } = await getCloudflareContext({
-            async: true,
-        });
+        await connect();
 
-        if (!env.NAVIGATION_KV) {
-            throw new Error("NAVIGATION_KV binding is missing");
-        }
+        const databaseCollections =
+            await mongoose.connection.db
+                .listCollections(
+                    {},
+                    { nameOnly: true },
+                )
+                .toArray();
 
-        const dashboard = await env.NAVIGATION_KV.get(
-            "dashboard",
-            "json",
-        );
-
-        if (
-            !dashboard ||
-            !Array.isArray(dashboard.collections)
-        ) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Dashboard has not been synchronized",
-                    collection: [],
-                    updatedAt: null,
-                },
-                {
-                    status: 503,
-                    headers: noCacheHeaders,
-                },
+        const validCollections =
+            databaseCollections.filter(
+                (item) =>
+                    !item.name.startsWith(
+                        "system.",
+                    ),
             );
-        }
+
+        const collections = await Promise.all(
+            validCollections.map(
+                async (item) => {
+                    const count =
+                        await mongoose.connection.db
+                            .collection(item.name)
+                            .estimatedDocumentCount();
+
+                    return {
+                        key: item.name,
+                        name:
+                            item.name
+                                .charAt(0)
+                                .toUpperCase() +
+                            item.name.slice(1),
+                        count,
+                    };
+                },
+            ),
+        );
 
         return NextResponse.json(
             {
                 success: true,
-                collection: dashboard.collections,
-                updatedAt: dashboard.updatedAt || null,
+                collection: collections,
+                updatedAt:
+                    new Date().toISOString(),
             },
             {
                 status: 200,
@@ -52,12 +61,16 @@ export const deashbord = async () => {
             },
         );
     } catch (error) {
-        console.error("Dashboard KV read failed:", error);
+        console.error(
+            "Dashboard loading failed:",
+            error,
+        );
 
         return NextResponse.json(
             {
                 success: false,
-                message: "Dashboard could not be loaded",
+                message:
+                    "Dashboard could not be loaded",
                 collection: [],
                 updatedAt: null,
             },

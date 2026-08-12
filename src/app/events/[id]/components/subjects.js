@@ -14,8 +14,7 @@ const EventSubjects = () => {
 
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [errorMessage, setErrorMessage] =
-        useState("");
+    const [errorMessage, setErrorMessage] = useState("");
 
     const getSubjects = async () => {
         try {
