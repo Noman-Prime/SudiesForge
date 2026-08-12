@@ -1,54 +1,36 @@
-import mongoose from "mongoose"
-
-const databaseCache =
-    globalThis.studiesForgeDatabase || {
-        connection: null,
-        promise: null
-    }
-
-globalThis.studiesForgeDatabase = databaseCache
+import mongoose from "mongoose";
 
 const connect = async () => {
     if (!process.env.DB_URL) {
-        throw new Error("DB_URL environment variable is missing")
-    }
-
-    if (
-        databaseCache.connection &&
-        mongoose.connection.readyState === 1
-    ) {
-        return databaseCache.connection
-    }
-
-    if (!databaseCache.promise) {
-        databaseCache.promise = mongoose.connect(
-            process.env.DB_URL,
-            {
-                maxPoolSize: 5,
-                minPoolSize: 0,
-                serverSelectionTimeoutMS: 10000,
-                connectTimeoutMS: 10000,
-                socketTimeoutMS: 30000,
-                family: 4
-            }
-        )
+        throw new Error(
+            "DB_URL environment variable is missing",
+        );
     }
 
     try {
-        databaseCache.connection =
-            await databaseCache.promise
+        const connection = await mongoose.connect(
+            process.env.DB_URL,
+            {
+                maxPoolSize: 1,
+                minPoolSize: 0,
+                maxIdleTimeMS: 10000,
+                serverSelectionTimeoutMS: 5000,
+                connectTimeoutMS: 5000,
+                socketTimeoutMS: 10000,
+            },
+        );
 
-        console.log("Database is active")
+        console.log("Database is active");
 
-        return databaseCache.connection
+        return connection;
     } catch (error) {
-        databaseCache.connection = null
-        databaseCache.promise = null
+        console.error(
+            "Database connection failed:",
+            error,
+        );
 
-        console.log("Database connection failed:", error)
-
-        throw error
+        throw error;
     }
-}
+};
 
-export default connect
+export default connect;
