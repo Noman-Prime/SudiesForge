@@ -1,8 +1,7 @@
-import cloudinary from "@/lib/cloudinary"
 import connect from "@/lib/db"
 import { deleteFile, uploadFile } from "@/lib/upload"
 import chapter from "@/models/chapter"
-import { ChartPie } from "lucide-react"
+import subjectModel from "@/models/subjects";
 import { NextResponse } from "next/server"
 
 export const createChapter = async (req) => {
@@ -30,16 +29,16 @@ export const createChapter = async (req) => {
     }
 }
 
-export const updateChapter = async (req) => {
+export const updateChapter = async (req, id) => {
     try {
         await connect()
-        const { subject, chapterNumber, chapterName } = await req.json
-        const Chapter = await chapter.findByIdAndUpdate(id, { subject, chapterNumber, chapterName }, { withCredentials: true })
-        if (!Chapter || Chapter.lenght === 0) {
+        const { subject, chapterNumber, chapterName } = await req.json()
+        const Chapter = await chapter.findByIdAndUpdate(id, { subject, chapterNumber, chapterName }, { new: true, runValidators: true })
+        if (!Chapter) {
             return NextResponse.json({
                 success: false,
                 message: "No Chapter is updated"
-            }, { status: 400 })
+            }, { status: 404 })
         }
         return NextResponse.json({
             success: true,
@@ -63,7 +62,7 @@ export const getChapter = async (req, id) => {
             return NextResponse.json({
                 success: false,
                 message: "No chapter is found"
-            }, { status: 400 })
+            }, { status: 404 })
         }
         return NextResponse.json({
             success: true,
@@ -87,12 +86,12 @@ export const getAllChapter = async (req) => {
             return NextResponse.json({
                 success: false,
                 message: "No chapter is found"
-            }, { status: 400 })
+            }, { status: 404 })
         }
         return NextResponse.json({
             success: true,
             message: "chapter is found",
-            chapter: Chapter
+            chapters: Chapters
         }, { status: 200 })
     } catch (error) {
         console.log(error);
@@ -106,16 +105,21 @@ export const getAllChapter = async (req) => {
 export const deleteChapter = async (req, id) => {
     try {
         await connect()
-        const Chapter = await chapter.findByIdAndDelete(id)
+        const Chapter = await chapter.findById(id)
         if (!Chapter) {
             return NextResponse.json({
                 success: false,
                 message: "Chapter is not found"
-            }, { status: 400 })
+            }, { status: 404 })
         }
+        const oldImage = Chapter.image?.public_id
+        if (oldImage) {
+            await deleteFile(oldImage, "image")
+        }
+        await Chapter.deleteOne()
         return NextResponse.json({
             success: true,
-            message: "Chapter is Delted"
+            message: "Chapter is Deleted"
         }, { status: 200 })
     } catch (error) {
         console.log(error);
@@ -137,7 +141,7 @@ export const subjectByChapter = async (req, id) => {
             }, { status: 404 })
         }
         return NextResponse.json({
-            success: false,
+            success: true,
             message: "chapters are found",
             chapters: Chapters
         }, { status: 200 })
@@ -152,52 +156,69 @@ export const subjectByChapter = async (req, id) => {
 
 export const createOrUpdateImage = async (req, id) => {
     try {
-        await connect()
-        const Chapter = await chapter.findById(id)
-        if (Chapter) {
+        await connect();
+
+        const Chapter = await chapter.findById(id);
+
+        if (!Chapter) {
             return NextResponse.json({
                 success: false,
-                message: "Chapter is not found"
-            }, { status: 404 })
+                message: "Chapter is not found",
+            }, { status: 404 });
         }
-        const oldImage = chapter.image?.public_id
-        const file = req.blob()
+
+        const oldImage = Chapter.image?.public_id;
+        const file = await req.blob();
+
         if (!file || file.size === 0) {
             return NextResponse.json({
                 success: false,
-                meesage: "Image is recquired to upload"
-            }, { status: 400 })
+                message: "Image is required to upload",
+            }, { status: 400 });
         }
+
         if (!file.type.startsWith("image/")) {
             return NextResponse.json({
                 success: false,
-                message: "Only image files are allowed"
-            }, { status: 400 })
+                message: "Only image files are allowed",
+            }, { status: 400 });
         }
+
         if (file.size > 5 * 1024 * 1024) {
             return NextResponse.json({
                 success: false,
-                meesage: "Upload image of maximum size 5MB"
-            }, { status: 400 })
+                message: "Upload an image with a maximum size of 5MB",
+            }, { status: 400 });
         }
+
+        const imageData = await uploadFile(
+            file,
+            `studiesforge/chapter/${id}/image`,
+            "image",
+        );
+
         if (oldImage) {
-            await deleteFile(oldImage, "image")
+            await deleteFile(oldImage, "image");
         }
-        const imageData = await uploadFile(file, `studiesforge/Chapter/${id}/image`, "image")
+
         Chapter.image = {
             public_id: imageData.public_id,
-            url: imageData.secure_url
-        }
-        await Chapter.save()
+            url: imageData.secure_url,
+        };
+
+        await Chapter.save();
+
         return NextResponse.json({
             success: true,
-            message: "Image is uploaded"
-        }, { status: 200 })
+            message: "Image is uploaded",
+            chapter: Chapter,
+        }, { status: 200 });
     } catch (error) {
         console.log(error);
+
         return NextResponse.json({
             success: false,
-            message: "Something went wrong"
-        }, { status: 500 })
+            message: "Something went wrong",
+        }, { status: 500 });
     }
-}
+};

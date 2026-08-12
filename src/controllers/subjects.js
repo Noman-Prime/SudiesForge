@@ -3,6 +3,7 @@ import { deleteFile, uploadFile } from "@/lib/upload"
 import subject from "@/models/subjects"
 import { NextResponse } from "next/server"
 import Event from "@/models/event";
+import chapter from "@/models/chapter";
 
 export const createSubject = async (req) => {
     try {
@@ -132,17 +133,27 @@ export const subjectByEvent = async (req, id) => {
 export const deleteSubject = async (req, id) => {
     try {
         await connect()
-        const Subject = await subject.findByIdAndDelete(id)
+        const Subject = await subject.findById(id)
         if (!Subject) {
             return NextResponse.json({
                 success: false,
                 message: "Subject is not deleted"
             }, { status: 400 })
         }
+        const existChapters = await chapter.exists({
+            subject: Subject._id
+        })
+        if (existChapters) {
+            return NextResponse.json({
+                success: false,
+                message: "Subject is not deleted beacuse Chapter are attached"
+            }, { status: 400 })
+        }
         const currentImage = Subject.image?.public_id
         if (currentImage) {
             await deleteFile(currentImage, "image")
         }
+        await Subject.deleteOne()
         return NextResponse.json({
             success: true,
             message: "Subject is deleted"

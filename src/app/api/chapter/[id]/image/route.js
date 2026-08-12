@@ -1,7 +1,8 @@
-import { createChapter, getAllChapter } from "@/controllers/chapter"
+import { createOrUpdateImage } from "@/controllers/chapter"
 import { isAdmin, isAuthenticated } from "@/lib/auth"
 
-export const POST = async (req) => {
+export const PUT = async (req, { params }) => {
+    const { id } = await params
     const auth = await isAuthenticated(req)
     if (!auth.user) {
         return auth
@@ -12,9 +13,5 @@ export const POST = async (req) => {
         return admin
     }
 
-    return createChapter(req)
-}
-
-export const GET = async (req) => {
-    return getAllChapter(req)
+    return createOrUpdateImage(req, id)
 }
