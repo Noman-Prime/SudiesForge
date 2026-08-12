@@ -20,7 +20,7 @@
     {
       "binding": "NAVIGATION_KV",
       "id": "050d24c2e4f34480b1111d91938de253",
-      "remote": false
+      "remote": true
     }
   ],
   "images": {
