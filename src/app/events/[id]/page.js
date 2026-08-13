@@ -32,7 +32,12 @@ const Events = () => {
                                 <EventOverview />
                             </div>
 
-                            <EventSubjects />
+                            <div
+                                id="subjects"
+                                className="scroll-mt-24"
+                            >
+                                <EventSubjects />
+                            </div>
 
                             <div
                                 id="materials"
