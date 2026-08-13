@@ -12,6 +12,7 @@ import {
     Construction,
     GraduationCap,
     Layers3,
+    LoaderCircle,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,11 +21,61 @@ const SubjectPage = () => {
     const { id, subjectId } = useParams();
 
     const [subject, setSubject] = useState(null);
+    const [chapters, setChapters] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingChapters, setLoadingChapters] =
+        useState(false);
     const [errorMessage, setErrorMessage] =
         useState("");
+    const [chapterError, setChapterError] =
+        useState("");
 
-    const getSubject = async () => {
+    const getChapters = async () => {
+        try {
+            setLoadingChapters(true);
+            setChapterError("");
+
+            const result = await axios.get(
+                `/api/chapter/subject/${subjectId}`,
+            );
+
+            if (result.data.success) {
+                const sortedChapters = [
+                    ...(result.data.chapters || []),
+                ].sort(
+                    (
+                        firstChapter,
+                        secondChapter,
+                    ) =>
+                        Number(
+                            firstChapter.chapterNumber,
+                        ) -
+                        Number(
+                            secondChapter.chapterNumber,
+                        ),
+                );
+
+                setChapters(sortedChapters);
+            }
+        } catch (error) {
+            if (error.response?.status === 404) {
+                setChapters([]);
+                return;
+            }
+
+            console.log(error);
+            setChapters([]);
+
+            setChapterError(
+                error.response?.data?.message ||
+                "Chapters could not be loaded",
+            );
+        } finally {
+            setLoadingChapters(false);
+        }
+    };
+
+    const getPageData = async () => {
         try {
             setLoading(true);
             setErrorMessage("");
@@ -33,32 +84,45 @@ const SubjectPage = () => {
                 `/api/subject/${subjectId}`,
             );
 
-            if (result.data.success) {
-                const currentSubject =
-                    result.data.subject;
+            if (!result.data.success) {
+                setSubject(null);
 
-                const subjectEventId =
-                    currentSubject.event?._id ||
-                    currentSubject.event;
+                setErrorMessage(
+                    result.data.message ||
+                    "Subject could not be loaded",
+                );
 
-                if (
-                    subjectEventId &&
-                    String(subjectEventId) !==
-                    String(id)
-                ) {
-                    setSubject(null);
-                    setErrorMessage(
-                        "This subject does not belong to this event",
-                    );
-                    return;
-                }
-
-                setSubject(currentSubject);
+                return;
             }
+
+            const currentSubject =
+                result.data.subject;
+
+            const subjectEventId =
+                currentSubject.event?._id ||
+                currentSubject.event;
+
+            if (
+                subjectEventId &&
+                String(subjectEventId) !==
+                String(id)
+            ) {
+                setSubject(null);
+
+                setErrorMessage(
+                    "This subject does not belong to this event",
+                );
+
+                return;
+            }
+
+            setSubject(currentSubject);
+
+            await getChapters();
         } catch (error) {
             console.log(error);
-
             setSubject(null);
+
             setErrorMessage(
                 error.response?.data?.message ||
                 "Subject could not be loaded",
@@ -69,10 +133,10 @@ const SubjectPage = () => {
     };
 
     useEffect(() => {
-        if (subjectId) {
-            getSubject();
+        if (id && subjectId) {
+            getPageData();
         }
-    }, [subjectId, id]);
+    }, [id, subjectId]);
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -98,7 +162,7 @@ const SubjectPage = () => {
                                 errorMessage ||
                                 "Subject is not available"
                             }
-                            onRetry={getSubject}
+                            onRetry={getPageData}
                             eventId={id}
                         />
                     ) : (
@@ -114,7 +178,9 @@ const SubjectPage = () => {
                                     Event
                                 </Link>
 
-                                <ChevronRight size={14} />
+                                <ChevronRight
+                                    size={14}
+                                />
 
                                 <Link
                                     href={`/events/${id}#subjects`}
@@ -123,7 +189,9 @@ const SubjectPage = () => {
                                     Subjects
                                 </Link>
 
-                                <ChevronRight size={14} />
+                                <ChevronRight
+                                    size={14}
+                                />
 
                                 <span className="text-blue-700">
                                     {subject.name}
@@ -164,7 +232,13 @@ const SubjectPage = () => {
                                                     </p>
 
                                                     <p className="text-sm font-bold text-slate-700">
-                                                        Coming soon
+                                                        {
+                                                            chapters.length
+                                                        }{" "}
+                                                        {chapters.length ===
+                                                            1
+                                                            ? "chapter"
+                                                            : "chapters"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -220,52 +294,192 @@ const SubjectPage = () => {
                             </section>
 
                             <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600">
-                                        Learning material
-                                    </p>
-
-                                    <h2 className="mt-1 text-lg font-extrabold text-[#071a4a] sm:text-xl">
-                                        Chapters and resources
-                                    </h2>
-                                </div>
-
-                                <div className="flex min-h-72 items-center justify-center bg-slate-50/60 px-5 py-10 text-center">
-                                    <div className="max-w-md">
-                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-                                            <Construction
-                                                size={30}
-                                                strokeWidth={
-                                                    1.8
-                                                }
-                                            />
-                                        </div>
-
-                                        <h3 className="mt-5 text-lg font-extrabold text-[#071a4a]">
-                                            Learning material is
-                                            coming soon
-                                        </h3>
-
-                                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                                            Chapters, topics,
-                                            notes, lectures and
-                                            practice material for{" "}
-                                            {subject.name} will
-                                            appear here when they
-                                            are added.
+                                <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600">
+                                            Learning material
                                         </p>
 
-                                        <Link
-                                            href={`/events/${id}#subjects`}
-                                            className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                                        >
-                                            Explore other subjects
-                                            <ChevronRight
-                                                size={17}
-                                            />
-                                        </Link>
+                                        <h2 className="mt-1 text-lg font-extrabold text-[#071a4a] sm:text-xl">
+                                            {subject.name}{" "}
+                                            Chapters
+                                        </h2>
+
+                                        <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-xs">
+                                            Browse the chapters
+                                            available under this
+                                            subject.
+                                        </p>
                                     </div>
+
+                                    {!loadingChapters &&
+                                        !chapterError && (
+                                            <div className="flex h-9 w-fit min-w-9 items-center justify-center rounded-xl bg-blue-50 px-3 text-xs font-extrabold text-blue-700">
+                                                {
+                                                    chapters.length
+                                                }
+                                            </div>
+                                        )}
                                 </div>
+
+                                {loadingChapters ? (
+                                    <div className="flex min-h-64 flex-col items-center justify-center bg-slate-50/60 px-5 py-10 text-center">
+                                        <LoaderCircle
+                                            size={30}
+                                            className="animate-spin text-blue-600"
+                                        />
+
+                                        <p className="mt-3 text-xs font-bold text-slate-500">
+                                            Loading
+                                            chapters...
+                                        </p>
+                                    </div>
+                                ) : chapterError ? (
+                                    <div className="flex min-h-64 items-center justify-center bg-slate-50/60 px-5 py-10 text-center">
+                                        <div>
+                                            <BookOpenText
+                                                size={38}
+                                                className="mx-auto text-red-400"
+                                            />
+
+                                            <h3 className="mt-4 text-sm font-extrabold text-[#071a4a]">
+                                                Chapters could
+                                                not be loaded
+                                            </h3>
+
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {
+                                                    chapterError
+                                                }
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                onClick={
+                                                    getChapters
+                                                }
+                                                className="mt-4 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
+                                            >
+                                                Try again
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : chapters.length > 0 ? (
+                                    <div className="grid grid-cols-2 gap-3 bg-slate-50/60 p-3 sm:grid-cols-3 sm:gap-4 sm:p-5 lg:grid-cols-4">
+                                        {chapters.map(
+                                            (chapter) => (
+                                                <article
+                                                    key={
+                                                        chapter._id
+                                                    }
+                                                    className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                                                >
+                                                    <div className="relative h-28 overflow-hidden bg-gradient-to-br from-blue-50 to-slate-100 sm:h-36">
+                                                        {chapter
+                                                            .image
+                                                            ?.url ? (
+                                                            <img
+                                                                src={
+                                                                    chapter
+                                                                        .image
+                                                                        .url
+                                                                }
+                                                                alt={
+                                                                    chapter.chapterName
+                                                                }
+                                                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex h-full w-full items-center justify-center">
+                                                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
+                                                                    <BookOpenText
+                                                                        size={
+                                                                            24
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="absolute left-2.5 top-2.5 rounded-lg bg-[#102a63]/90 px-2 py-1 text-[9px] font-bold text-white shadow-sm backdrop-blur-sm sm:text-[10px]">
+                                                            Chapter{" "}
+                                                            {
+                                                                chapter.chapterNumber
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-1 flex-col p-3 sm:p-4">
+                                                        <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-blue-600 sm:text-[10px]">
+                                                            {
+                                                                subject.name
+                                                            }
+                                                        </p>
+
+                                                        <h3 className="mt-1 line-clamp-2 text-sm font-extrabold text-[#071a4a] sm:text-base">
+                                                            {
+                                                                chapter.chapterName
+                                                            }
+                                                        </h3>
+
+                                                        <div className="mt-auto border-t border-slate-100 pt-3">
+                                                            <div className="flex items-center gap-2 text-[9px] font-semibold text-slate-500 sm:text-[11px]">
+                                                                <Construction
+                                                                    size={
+                                                                        14
+                                                                    }
+                                                                    className="shrink-0 text-blue-500"
+                                                                />
+                                                                Study
+                                                                material
+                                                                will
+                                                                appear
+                                                                here
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            ),
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex min-h-64 items-center justify-center bg-slate-50/60 px-5 py-10 text-center">
+                                        <div className="max-w-md">
+                                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                                                <BookOpenText
+                                                    size={27}
+                                                    strokeWidth={
+                                                        1.8
+                                                    }
+                                                />
+                                            </div>
+
+                                            <h3 className="mt-4 text-base font-extrabold text-[#071a4a]">
+                                                No chapters are
+                                                available
+                                            </h3>
+
+                                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                                Chapters for{" "}
+                                                {subject.name}{" "}
+                                                will appear here
+                                                when they are
+                                                added.
+                                            </p>
+
+                                            <Link
+                                                href={`/events/${id}#subjects`}
+                                                className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                            >
+                                                Explore other
+                                                subjects
+                                                <ChevronRight
+                                                    size={17}
+                                                />
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         </>
                     )}
