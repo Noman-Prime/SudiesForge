@@ -5,79 +5,38 @@ import Navbar from "@/app/components/navbar";
 import { EventProvider } from "@/context/EventContext";
 import axios from "axios";
 import Link from "next/link";
-import {
-    ArrowLeft,
-    ArrowRight,
-    BookOpenCheck,
-    BookOpenText,
-    ChevronRight,
-    GraduationCap,
-    Hash,
-    Layers3,
-    LoaderCircle,
-    Sparkles,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, BookOpenText, ChevronRight, GraduationCap, RefreshCw } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+const sortChapters = (items) => {
+    return [...items].sort((first, second) => Number(first.chapterNumber) - Number(second.chapterNumber));
+};
+
 const SubjectPage = () => {
     const { id, subjectId } = useParams();
-
     const [subject, setSubject] = useState(null);
     const [chapters, setChapters] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [loadingChapters, setLoadingChapters] =
-        useState(false);
-    const [errorMessage, setErrorMessage] =
-        useState("");
-    const [chapterError, setChapterError] =
-        useState("");
+    const [loadingChapters, setLoadingChapters] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [chapterError, setChapterError] = useState("");
 
-    const getChapters = async () => {
-        try {
-            setLoadingChapters(true);
+    const handleChaptersResult = (result) => {
+        if (result.status === "fulfilled" && result.value.data.success) {
+            setChapters(sortChapters(result.value.data.chapters || []));
             setChapterError("");
-
-            const result = await axios.get(
-                `/api/chapter/subject/${subjectId}`,
-            );
-
-            if (result.data.success) {
-                const sortedChapters = [
-                    ...(result.data.chapters || []),
-                ].sort(
-                    (firstChapter, secondChapter) =>
-                        Number(firstChapter.chapterNumber) -
-                        Number(secondChapter.chapterNumber),
-                );
-
-                setChapters(sortedChapters);
-                return;
-            }
-
-            setChapters([]);
-
-            setChapterError(
-                result.data.message ||
-                "Chapters could not be loaded",
-            );
-        } catch (error) {
-            if (error.response?.status === 404) {
-                setChapters([]);
-                setChapterError("");
-                return;
-            }
-
-            console.log(error);
-            setChapters([]);
-
-            setChapterError(
-                error.response?.data?.message ||
-                "Chapters could not be loaded",
-            );
-        } finally {
-            setLoadingChapters(false);
+            return;
         }
+
+        if (result.status === "rejected" && result.reason?.response?.status === 404) {
+            setChapters([]);
+            setChapterError("");
+            return;
+        }
+
+        setChapters([]);
+        setChapterError(result.reason?.response?.data?.message || "Chapters could not be loaded");
     };
 
     const getPageData = async () => {
@@ -85,55 +44,67 @@ const SubjectPage = () => {
             setLoading(true);
             setErrorMessage("");
             setChapterError("");
-            setChapters([]);
 
-            const result = await axios.get(
-                `/api/subject/${subjectId}`,
-            );
+            const [subjectResult, chaptersResult] = await Promise.allSettled([
+                axios.get(`/api/subject/${subjectId}`),
+                axios.get(`/api/chapter/subject/${subjectId}`),
+            ]);
 
-            if (!result.data.success) {
+            if (subjectResult.status !== "fulfilled" || !subjectResult.value.data.success) {
                 setSubject(null);
-
-                setErrorMessage(
-                    result.data.message ||
-                    "Subject could not be loaded",
-                );
-
+                setChapters([]);
+                setErrorMessage(subjectResult.reason?.response?.data?.message || "Subject could not be loaded");
                 return;
             }
 
-            const currentSubject = result.data.subject;
+            const currentSubject = subjectResult.value.data.subject;
+            const subjectEventId = currentSubject.event?._id || currentSubject.event;
 
-            const subjectEventId =
-                currentSubject.event?._id ||
-                currentSubject.event;
-
-            if (
-                subjectEventId &&
-                String(subjectEventId) !== String(id)
-            ) {
+            if (subjectEventId && String(subjectEventId) !== String(id)) {
                 setSubject(null);
-
-                setErrorMessage(
-                    "This subject does not belong to this event",
-                );
-
+                setChapters([]);
+                setErrorMessage("This subject does not belong to this event");
                 return;
             }
 
             setSubject(currentSubject);
-
-            await getChapters();
+            handleChaptersResult(chaptersResult);
         } catch (error) {
             console.log(error);
             setSubject(null);
-
-            setErrorMessage(
-                error.response?.data?.message ||
-                "Subject could not be loaded",
-            );
+            setChapters([]);
+            setErrorMessage(error.response?.data?.message || "Subject could not be loaded");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const getChapters = async () => {
+        try {
+            setLoadingChapters(true);
+            setChapterError("");
+
+            const result = await axios.get(`/api/chapter/subject/${subjectId}`);
+
+            if (result.data.success) {
+                setChapters(sortChapters(result.data.chapters || []));
+            } else {
+                setChapters([]);
+                setChapterError(result.data.message || "Chapters could not be loaded");
+            }
+        } catch (error) {
+            console.log(error);
+
+            if (error.response?.status === 404) {
+                setChapters([]);
+                setChapterError("");
+                return;
+            }
+
+            setChapters([]);
+            setChapterError(error.response?.data?.message || "Chapters could not be loaded");
+        } finally {
+            setLoadingChapters(false);
         }
     };
 
@@ -143,43 +114,29 @@ const SubjectPage = () => {
         }
     }, [id, subjectId]);
 
-    const eventName =
-        typeof subject?.event === "object"
-            ? subject.event?.name
-            : "";
-
     return (
-        <div className="min-h-screen bg-[#f4f7fb]">
+        <div className="min-h-screen bg-slate-50">
             <EventProvider>
                 <Navbar />
             </EventProvider>
 
-            <main className="min-h-[calc(100vh-80px)] px-3 py-4 sm:px-5 sm:py-6 lg:px-7">
-                <div className="mx-auto w-full max-w-[1300px]">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Link
-                            href={`/events/${id}#subjects`}
-                            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
-                        >
-                            <ArrowLeft size={16} />
-                            Back to subjects
+            <main className="min-h-[calc(100vh-80px)] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+                <div className="mx-auto w-full max-w-[1200px]">
+                    <div className="flex items-center justify-between gap-3">
+                        <Link href={`/events/${id}#subjects`} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700">
+                            <ArrowLeft size={14} />
+                            Subjects
                         </Link>
 
                         {!loading && subject && (
-                            <nav
-                                aria-label="Breadcrumb"
-                                className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-slate-500"
-                            >
-                                <Link
-                                    href={`/events/${id}`}
-                                    className="transition hover:text-blue-700"
-                                >
+                            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[9px] font-semibold text-slate-500 sm:text-[10px]">
+                                <Link href={`/events/${id}`} className="shrink-0 transition hover:text-blue-700">
                                     Event
                                 </Link>
 
-                                <ChevronRight size={13} />
+                                <ChevronRight size={12} className="shrink-0 text-slate-300" />
 
-                                <span className="max-w-40 truncate text-blue-700 sm:max-w-64">
+                                <span className="truncate text-blue-700">
                                     {subject.name}
                                 </span>
                             </nav>
@@ -187,235 +144,123 @@ const SubjectPage = () => {
                     </div>
 
                     {loading ? (
-                        <SubjectPageLoading />
+                        <SubjectLoading />
                     ) : errorMessage || !subject ? (
-                        <SubjectPageError
-                            message={
-                                errorMessage ||
-                                "Subject is not available"
-                            }
-                            onRetry={getPageData}
-                            eventId={id}
-                        />
+                        <SubjectError message={errorMessage || "Subject is not available"} retry={getPageData} eventId={id} />
                     ) : (
                         <>
-                            <section className="relative mt-4 overflow-hidden rounded-2xl bg-[#071a4a] shadow-[0_18px_45px_-30px_rgba(7,26,74,0.8)]">
-                                <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-
-                                <div className="absolute -bottom-32 right-1/3 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
-
-                                <div className="relative grid lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] lg:items-stretch">
-                                    <div className="flex flex-col justify-center px-5 py-6 sm:px-7 sm:py-8 lg:px-9 lg:py-9">
-                                        <div className="flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.13em] text-blue-100 backdrop-blur-sm sm:text-[9px]">
+                            <section className="mt-4 overflow-hidden rounded-2xl border border-[#102a63] bg-[#102a63] shadow-sm">
+                                <div className="grid md:grid-cols-[minmax(0,1fr)_280px] md:items-stretch">
+                                    <div className="flex flex-col justify-center px-4 py-5 sm:px-6 sm:py-6">
+                                        <div className="flex w-fit items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-[0.13em] text-blue-100">
                                             <GraduationCap size={12} />
-
-                                            {eventName ||
-                                                "StudiesForge subject"}
+                                            Subject
                                         </div>
 
-                                        <h1 className="mt-3 max-w-2xl text-2xl font-black tracking-tight text-white sm:text-3xl lg:text-4xl lg:leading-[1.1]">
+                                        <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
                                             {subject.name}
                                         </h1>
 
-                                        <p className="mt-2.5 max-w-xl text-xs leading-5 text-blue-100/85 sm:text-sm sm:leading-6">
-                                            Build your understanding chapter by
-                                            chapter with an organized learning path
-                                            for {subject.name}.
+                                        <p className="mt-2 max-w-xl text-[10px] leading-5 text-blue-100 sm:text-xs">
+                                            Follow the available chapters in order and continue to their topics and practice material.
                                         </p>
 
-                                        <div className="mt-5 grid max-w-lg grid-cols-2 gap-2.5">
-                                            <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
-                                                <div className="flex items-center gap-1.5 text-blue-200">
-                                                    <Layers3 size={14} />
+                                        <div className="mt-4 flex w-fit items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
+                                            <BookOpen size={16} className="text-blue-200" />
 
-                                                    <span className="text-[8px] font-bold uppercase tracking-[0.1em]">
-                                                        Available
-                                                    </span>
-                                                </div>
+                                            <span className="text-sm font-extrabold text-white">
+                                                {chapters.length}
+                                            </span>
 
-                                                <p className="mt-1.5 text-lg font-black text-white sm:text-xl">
-                                                    {chapters.length}
-                                                </p>
-
-                                                <p className="text-[9px] font-semibold text-blue-100/70 sm:text-[10px]">
-                                                    {chapters.length === 1
-                                                        ? "Chapter"
-                                                        : "Chapters"}
-                                                </p>
-                                            </div>
-
-                                            <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
-                                                <div className="flex items-center gap-1.5 text-blue-200">
-                                                    <BookOpenCheck size={14} />
-
-                                                    <span className="text-[8px] font-bold uppercase tracking-[0.1em]">
-                                                        Learning path
-                                                    </span>
-                                                </div>
-
-                                                <p className="mt-1.5 text-xs font-extrabold text-white sm:text-sm">
-                                                    Well organized
-                                                </p>
-
-                                                <p className="mt-0.5 text-[9px] font-semibold text-blue-100/70 sm:text-[10px]">
-                                                    Follow chapters in order
-                                                </p>
-                                            </div>
+                                            <span className="text-[9px] font-semibold text-blue-200">
+                                                {chapters.length === 1 ? "Chapter" : "Chapters"}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    <div className="relative p-3 pt-0 sm:p-5 sm:pt-0 lg:p-5 lg:pl-0">
-                                        <div className="relative h-48 overflow-hidden rounded-xl border border-white/10 bg-blue-900/50 sm:h-60 lg:h-full lg:min-h-[300px]">
+                                    <div className="p-3 pt-0 md:p-3 md:pl-0">
+                                        <div className="h-44 overflow-hidden rounded-xl border border-white/10 bg-blue-900/40 md:h-full md:min-h-52">
                                             {subject.image?.url ? (
-                                                <img
-                                                    src={subject.image.url}
-                                                    alt={subject.name}
-                                                    className="absolute inset-0 h-full w-full object-cover"
-                                                />
+                                                <img src={subject.image.url} alt={subject.name} className="h-full w-full object-cover" />
                                             ) : (
-                                                <div className="flex h-full items-center justify-center bg-gradient-to-br from-blue-700 to-[#071a4a] text-blue-100">
-                                                    <BookOpenText
-                                                        size={54}
-                                                        strokeWidth={1.25}
-                                                    />
+                                                <div className="flex h-full w-full items-center justify-center text-blue-100">
+                                                    <BookOpenText size={44} strokeWidth={1.4} />
                                                 </div>
                                             )}
-
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[#071a4a]/80 via-transparent to-transparent" />
-
-                                            <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/15 bg-[#071a4a]/70 p-3 text-white backdrop-blur-md sm:inset-x-4 sm:bottom-4">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700">
-                                                        <Sparkles size={15} />
-                                                    </div>
-
-                                                    <div className="min-w-0">
-                                                        <p className="text-[8px] font-bold uppercase tracking-[0.11em] text-blue-200">
-                                                            Subject library
-                                                        </p>
-
-                                                        <p className="mt-0.5 truncate text-xs font-extrabold sm:text-sm">
-                                                            {subject.name}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
                             <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                                    <div className="flex items-start gap-2.5">
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                                            <BookOpenCheck size={18} />
+                                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-5">
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                            <BookOpen size={18} strokeWidth={1.9} />
                                         </div>
 
-                                        <div>
-                                            <p className="text-[8px] font-bold uppercase tracking-[0.13em] text-blue-600 sm:text-[9px]">
-                                                Course outline
+                                        <div className="min-w-0">
+                                            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-blue-600 sm:text-[9px]">
+                                                Subject chapters
                                             </p>
 
-                                            <h2 className="mt-0.5 text-base font-black tracking-tight text-[#071a4a] sm:text-lg">
+                                            <h2 className="mt-0.5 text-base font-extrabold text-[#071a4a] sm:text-lg">
                                                 {subject.name} Chapters
                                             </h2>
 
-                                            <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">
-                                                Select a chapter to explore its
-                                                topics and complete book-style
-                                                learning material.
+                                            <p className="mt-1 text-[9px] leading-4 text-slate-500 sm:text-[11px]">
+                                                Choose a chapter to view its available topics.
                                             </p>
                                         </div>
                                     </div>
 
-                                    {!loadingChapters &&
-                                        !chapterError && (
-                                            <div className="flex w-fit items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-extrabold text-blue-700">
-                                                <Layers3 size={13} />
-
-                                                {chapters.length}{" "}
-                                                {chapters.length === 1
-                                                    ? "chapter"
-                                                    : "chapters"}
-                                            </div>
-                                        )}
+                                    {!loadingChapters && !chapterError && (
+                                        <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 px-2 text-[10px] font-extrabold text-blue-700">
+                                            {chapters.length}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {loadingChapters ? (
                                     <ChaptersLoading />
                                 ) : chapterError ? (
-                                    <ChapterError
-                                        message={chapterError}
-                                        onRetry={getChapters}
-                                    />
+                                    <ChaptersError message={chapterError} retry={getChapters} />
                                 ) : chapters.length > 0 ? (
-                                    <div className="grid grid-cols-2 gap-3 bg-slate-50/70 p-3 sm:p-4 lg:grid-cols-4">
+                                    <div className="grid grid-cols-2 gap-2.5 bg-slate-50/70 p-3 sm:gap-3 sm:p-4 lg:grid-cols-4">
                                         {chapters.map((chapter) => (
-                                            <Link
-                                                key={chapter._id}
-                                                href={`/events/${id}/subjects/${subjectId}/chapters/${chapter._id}`}
-                                                aria-label={`Open chapter ${chapter.chapterNumber}: ${chapter.chapterName}`}
-                                                className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                                            >
-                                                <div className="relative h-24 overflow-hidden bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 sm:h-28 lg:h-32">
+                                            <Link key={chapter._id} href={`/events/${id}/subjects/${subjectId}/chapters/${chapter._id}`} aria-label={`Open chapter ${chapter.chapterNumber}: ${chapter.chapterName}`} className="group min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
+                                                <div className="relative h-24 overflow-hidden bg-gradient-to-br from-blue-50 to-slate-100 sm:h-28">
                                                     {chapter.image?.url ? (
-                                                        <img
-                                                            src={chapter.image.url}
-                                                            alt={chapter.chapterName}
-                                                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                                        />
+                                                        <img src={chapter.image.url} alt={chapter.chapterName} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                                                     ) : (
-                                                        <div className="flex h-full items-center justify-center">
-                                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-sm sm:h-12 sm:w-12">
-                                                                <BookOpenText
-                                                                    size={22}
-                                                                    strokeWidth={1.7}
-                                                                />
-                                                            </div>
+                                                        <div className="flex h-full w-full items-center justify-center text-blue-500">
+                                                            <BookOpenText size={27} strokeWidth={1.7} />
                                                         </div>
                                                     )}
 
-                                                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#071a4a]/40 to-transparent" />
-
-                                                    <div className="absolute left-2 top-2 flex items-center gap-1 rounded-lg bg-[#071a4a]/90 px-2 py-1 text-[8px] font-extrabold text-white shadow-sm backdrop-blur-sm sm:text-[9px]">
-                                                        <Hash size={10} />
-
-                                                        Chapter{" "}
-                                                        {chapter.chapterNumber}
-                                                    </div>
+                                                    <span className="absolute left-2 top-2 rounded-md border border-white/60 bg-white/90 px-2 py-1 text-[7px] font-extrabold uppercase tracking-[0.1em] text-blue-700 shadow-sm">
+                                                        Chapter {chapter.chapterNumber}
+                                                    </span>
                                                 </div>
 
-                                                <div className="flex flex-1 flex-col p-3 sm:p-3.5">
-                                                    <p className="truncate text-[7px] font-bold uppercase tracking-[0.12em] text-blue-600 sm:text-[8px]">
-                                                        {subject.name}
-                                                    </p>
-
-                                                    <h3 className="mt-1 line-clamp-2 text-xs font-black leading-4 text-[#071a4a] sm:text-sm sm:leading-5">
+                                                <div className="p-2.5 sm:p-3">
+                                                    <h3 className="line-clamp-2 min-h-8 text-[10px] font-extrabold leading-4 text-[#071a4a] sm:text-xs">
                                                         {chapter.chapterName}
                                                     </h3>
 
-                                                    <div className="mt-3 border-t border-slate-100 pt-2.5">
-                                                        <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 px-2.5 py-2 text-[8px] font-bold text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white sm:text-[9px]">
-                                                            <span>
-                                                                Open chapter
-                                                            </span>
+                                                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                                                        <span className="text-[8px] font-bold text-blue-600">
+                                                            Open chapter
+                                                        </span>
 
-                                                            <ArrowRight
-                                                                size={13}
-                                                                className="shrink-0 transition-transform group-hover:translate-x-0.5"
-                                                            />
-                                                        </div>
+                                                        <ArrowRight size={13} className="shrink-0 text-blue-500 transition group-hover:translate-x-0.5" />
                                                     </div>
                                                 </div>
                                             </Link>
                                         ))}
                                     </div>
                                 ) : (
-                                    <EmptyChapters
-                                        subjectName={subject.name}
-                                        eventId={id}
-                                    />
+                                    <EmptyChapters subjectName={subject.name} eventId={id} />
                                 )}
                             </section>
                         </>
@@ -428,135 +273,99 @@ const SubjectPage = () => {
     );
 };
 
-const SubjectPageLoading = () => {
+const SubjectLoading = () => {
     return (
-        <div className="mt-4 animate-pulse overflow-hidden rounded-2xl bg-[#071a4a]">
-            <div className="grid lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)]">
-                <div className="px-5 py-6 sm:px-7 sm:py-8 lg:px-9 lg:py-9">
-                    <div className="h-5 w-36 rounded-full bg-white/10" />
-
-                    <div className="mt-4 h-9 w-3/4 max-w-sm rounded-lg bg-white/15" />
-
-                    <div className="mt-4 h-3 w-full max-w-xl rounded bg-white/10" />
-
-                    <div className="mt-2 h-4 w-4/5 max-w-lg rounded bg-white/10" />
-
-                    <div className="mt-5 grid max-w-lg grid-cols-2 gap-2.5">
-                        <div className="h-20 rounded-xl bg-white/10" />
-
-                        <div className="h-20 rounded-xl bg-white/10" />
-                    </div>
+        <section className="mt-4 animate-pulse overflow-hidden rounded-2xl bg-[#102a63]">
+            <div className="grid md:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="px-4 py-6 sm:px-6">
+                    <div className="h-5 w-20 rounded-lg bg-white/10" />
+                    <div className="mt-4 h-8 w-56 max-w-full rounded bg-white/15" />
+                    <div className="mt-3 h-3 w-full max-w-lg rounded bg-white/10" />
+                    <div className="mt-2 h-3 w-4/5 max-w-md rounded bg-white/10" />
+                    <div className="mt-5 h-10 w-28 rounded-xl bg-white/10" />
                 </div>
 
-                <div className="p-3 pt-0 sm:p-5 sm:pt-0 lg:p-5 lg:pl-0">
-                    <div className="h-48 rounded-xl bg-white/10 sm:h-60 lg:h-full lg:min-h-[300px]" />
+                <div className="p-3 pt-0 md:pl-0 md:pt-3">
+                    <div className="h-44 rounded-xl bg-white/10 md:h-full md:min-h-52" />
                 </div>
             </div>
-        </div>
+        </section>
     );
 };
 
 const ChaptersLoading = () => {
     return (
-        <div className="flex min-h-56 flex-col items-center justify-center bg-slate-50/70 px-4 py-9 text-center">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <LoaderCircle
-                    size={22}
-                    className="animate-spin"
-                />
-            </div>
+        <div className="grid grid-cols-2 gap-2.5 bg-slate-50/70 p-3 sm:gap-3 sm:p-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="animate-pulse overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div className="h-24 bg-slate-200 sm:h-28" />
 
-            <p className="mt-3 text-xs font-extrabold text-[#071a4a]">
-                Loading chapters
-            </p>
-
-            <p className="mt-1 text-[10px] text-slate-500">
-                Preparing the subject outline...
-            </p>
+                    <div className="p-3">
+                        <div className="h-3 w-3/4 rounded bg-slate-200" />
+                        <div className="mt-2 h-3 w-1/2 rounded bg-slate-100" />
+                        <div className="mt-3 h-6 rounded bg-slate-100" />
+                    </div>
+                </div>
+            ))}
         </div>
     );
 };
 
-const ChapterError = ({
-    message,
-    onRetry,
-}) => {
+const ChaptersError = ({ message, retry }) => {
     return (
-        <div className="flex min-h-56 items-center justify-center bg-slate-50/70 px-4 py-9 text-center">
-            <div className="max-w-sm">
+        <div className="bg-slate-50/70 px-4 py-10 text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                <AlertCircle size={19} />
+            </div>
+
+            <h3 className="mt-3 text-sm font-extrabold text-[#071a4a]">
+                Chapters could not be loaded
+            </h3>
+
+            <p className="mx-auto mt-1.5 max-w-md text-[10px] leading-5 text-slate-500">
+                {message}
+            </p>
+
+            <button type="button" onClick={retry} className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[10px] font-bold text-white transition hover:bg-blue-700">
+                <RefreshCw size={13} />
+                Try Again
+            </button>
+        </div>
+    );
+};
+
+const EmptyChapters = ({ subjectName, eventId }) => {
+    return (
+        <div className="bg-slate-50/70 px-4 py-10 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <BookOpenText size={21} strokeWidth={1.7} />
+            </div>
+
+            <h3 className="mt-3 text-sm font-extrabold text-[#071a4a]">
+                No chapters are available
+            </h3>
+
+            <p className="mx-auto mt-1 max-w-md text-[10px] leading-5 text-slate-500">
+                Chapters for {subjectName} will appear here when they are added.
+            </p>
+
+            <Link href={`/events/${eventId}#subjects`} className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 text-[10px] font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-700">
+                Other Subjects
+                <ChevronRight size={14} />
+            </Link>
+        </div>
+    );
+};
+
+const SubjectError = ({ message, retry, eventId }) => {
+    return (
+        <section className="mt-4 flex min-h-72 items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-10 text-center shadow-sm">
+            <div className="max-w-md">
                 <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                    <BookOpenText size={22} />
+                    <AlertCircle size={21} />
                 </div>
 
-                <h3 className="mt-3 text-sm font-black text-[#071a4a]">
-                    Chapters could not be loaded
-                </h3>
-
-                <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                    {message}
-                </p>
-
-                <button
-                    type="button"
-                    onClick={onRetry}
-                    className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-blue-700"
-                >
-                    Try again
-                </button>
-            </div>
-        </div>
-    );
-};
-
-const EmptyChapters = ({
-    subjectName,
-    eventId,
-}) => {
-    return (
-        <div className="flex min-h-60 items-center justify-center bg-slate-50/70 px-4 py-9 text-center">
-            <div className="max-w-md">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                    <BookOpenText
-                        size={24}
-                        strokeWidth={1.7}
-                    />
-                </div>
-
-                <h3 className="mt-4 text-base font-black text-[#071a4a]">
-                    No chapters are available yet
-                </h3>
-
-                <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                    Chapters for {subjectName} will appear here
-                    as soon as they are added.
-                </p>
-
-                <Link
-                    href={`/events/${eventId}#subjects`}
-                    className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
-                >
-                    Explore other subjects
-
-                    <ChevronRight size={17} />
-                </Link>
-            </div>
-        </div>
-    );
-};
-
-const SubjectPageError = ({
-    message,
-    onRetry,
-    eventId,
-}) => {
-    return (
-        <section className="mt-4 flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center shadow-sm">
-            <div className="max-w-md">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                    <BookOpenText size={24} />
-                </div>
-
-                <h1 className="mt-4 text-lg font-black text-[#071a4a] sm:text-xl">
+                <h1 className="mt-3 text-base font-extrabold text-[#071a4a]">
                     Subject could not be opened
                 </h1>
 
@@ -564,20 +373,14 @@ const SubjectPageError = ({
                     {message}
                 </p>
 
-                <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={onRetry}
-                        className="rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
-                    >
-                        Try again
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                    <button type="button" onClick={retry} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[10px] font-bold text-white transition hover:bg-blue-700">
+                        <RefreshCw size={13} />
+                        Try Again
                     </button>
 
-                    <Link
-                        href={`/events/${eventId}#subjects`}
-                        className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
-                    >
-                        Back to subjects
+                    <Link href={`/events/${eventId}#subjects`} className="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-4 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50">
+                        Back to Subjects
                     </Link>
                 </div>
             </div>

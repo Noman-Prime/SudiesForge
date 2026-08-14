@@ -1,87 +1,82 @@
-import connect from "@/lib/db"
-import event from "@/models/event"
-import mongoose from "mongoose"
-import { NextResponse } from "next/server"
+import connect from "@/lib/db";
+import chapter from "@/models/chapter";
+import event from "@/models/event";
+import mcqs from "@/models/mcqs";
+import subject from "@/models/subjects";
+import topic from "@/models/topic";
+import mongoose from "mongoose";
+import { NextResponse } from "next/server";
 
 export const eventNavigation = async (req, id) => {
     try {
-        await connect()
+        await connect();
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json({
                 success: false,
-                message: "Invalid event ID"
-            }, { status: 400 })
+                message: "Invalid event ID",
+            }, { status: 400 });
         }
 
-        const Event = await event.findById(id)
+        const Event = await event.findById(id).select("name").lean();
 
         if (!Event) {
             return NextResponse.json({
                 success: false,
-                message: "Event is not found"
-            }, { status: 404 })
+                message: "Event is not found",
+            }, { status: 404 });
         }
 
-        const database = mongoose.connection.db
+        const Subjects = await subject.find({ event: Event._id }).select("_id").lean();
+        const subjectIds = Subjects.map((item) => item._id);
 
-        if (!database) {
-            return NextResponse.json({
-                success: false,
-                message: "Database is unavailable"
-            }, { status: 500 })
-        }
+        const Chapters = subjectIds.length > 0
+            ? await chapter.find({ subject: { $in: subjectIds } }).select("_id").lean()
+            : [];
 
-        const eventId = new mongoose.Types.ObjectId(id)
+        const chapterIds = Chapters.map((item) => item._id);
 
-        const collectionList = await database
-            .listCollections({}, { nameOnly: true })
-            .toArray()
+        const [topicCount, mcqCount] = await Promise.all([
+            chapterIds.length > 0
+                ? topic.countDocuments({ chapter: { $in: chapterIds } })
+                : 0,
+            mcqs.countDocuments({ event: Event._id }),
+        ]);
 
-        const collections = []
-
-        for (const item of collectionList) {
-            if (
-                item.name.startsWith("system.") ||
-                item.name === "events"
-            ) {
-                continue
-            }
-
-            const count = await database
-                .collection(item.name)
-                .countDocuments({
-                    event: eventId
-                })
-
-            if (count === 0) {
-                continue
-            }
-
-            const name = item.name
-                .replace(/[-_]/g, " ")
-                .replace(/\b\w/g, (character) =>
-                    character.toUpperCase()
-                )
-
-            collections.push({
-                key: item.name,
-                name,
-                count
-            })
-        }
+        const collection = [
+            {
+                key: "subjects",
+                name: "Subjects",
+                count: Subjects.length,
+            },
+            {
+                key: "chapters",
+                name: "Chapters",
+                count: Chapters.length,
+            },
+            {
+                key: "topics",
+                name: "Topics",
+                count: topicCount,
+            },
+            {
+                key: "mcqs",
+                name: "MCQs",
+                count: mcqCount,
+            },
+        ].filter((item) => item.count > 0);
 
         return NextResponse.json({
             success: true,
             eventName: Event.name,
-            collection: collections
-        }, { status: 200 })
+            collection,
+        }, { status: 200 });
     } catch (error) {
-        console.log(error)
+        console.log(error);
 
         return NextResponse.json({
             success: false,
-            message: "Something went wrong"
-        }, { status: 500 })
+            message: "Something went wrong",
+        }, { status: 500 });
     }
-}
+};
