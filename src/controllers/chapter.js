@@ -2,6 +2,7 @@ import connect from "@/lib/db"
 import { deleteFile, uploadFile } from "@/lib/upload"
 import chapter from "@/models/chapter"
 import subjectModel from "@/models/subjects";
+import topic from "@/models/topic";
 import { NextResponse } from "next/server"
 
 export const createChapter = async (req) => {
@@ -111,6 +112,13 @@ export const deleteChapter = async (req, id) => {
                 success: false,
                 message: "Chapter is not found"
             }, { status: 404 })
+        }
+        const chapterTopics = await topic.exists({ chapter: Chapter._id })
+        if (chapterTopics) {
+            return NextResponse.json({
+                success: false,
+                message: "Chapter is not Deleted, beacuse Topics of this chapter are not deleted! first delete Topics"
+            }, { status: 409 })
         }
         const oldImage = Chapter.image?.public_id
         if (oldImage) {

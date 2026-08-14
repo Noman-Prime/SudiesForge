@@ -7,10 +7,10 @@ import axios from "axios";
 import Link from "next/link";
 import {
     ArrowLeft,
+    ArrowRight,
     BookOpenCheck,
     BookOpenText,
     ChevronRight,
-    Clock3,
     GraduationCap,
     Hash,
     Layers3,
@@ -322,8 +322,9 @@ const SubjectPage = () => {
                                             </h2>
 
                                             <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">
-                                                Start from any chapter and explore
-                                                the available learning material.
+                                                Select a chapter to explore its
+                                                topics and complete book-style
+                                                learning material.
                                             </p>
                                         </div>
                                     </div>
@@ -351,8 +352,10 @@ const SubjectPage = () => {
                                 ) : chapters.length > 0 ? (
                                     <div className="grid grid-cols-2 gap-3 bg-slate-50/70 p-3 sm:p-4 lg:grid-cols-4">
                                         {chapters.map((chapter) => (
-                                            <article
+                                            <Link
                                                 key={chapter._id}
+                                                href={`/events/${id}/subjects/${subjectId}/chapters/${chapter._id}`}
+                                                aria-label={`Open chapter ${chapter.chapterNumber}: ${chapter.chapterName}`}
                                                 className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
                                             >
                                                 <div className="relative h-24 overflow-hidden bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 sm:h-28 lg:h-32">
@@ -393,17 +396,19 @@ const SubjectPage = () => {
                                                     </h3>
 
                                                     <div className="mt-3 border-t border-slate-100 pt-2.5">
-                                                        <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-2 text-[8px] font-semibold text-slate-500 sm:text-[9px]">
-                                                            <Clock3
-                                                                size={12}
-                                                                className="shrink-0 text-blue-600"
-                                                            />
+                                                        <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 px-2.5 py-2 text-[8px] font-bold text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white sm:text-[9px]">
+                                                            <span>
+                                                                Open chapter
+                                                            </span>
 
-                                                            Resources coming soon
+                                                            <ArrowRight
+                                                                size={13}
+                                                                className="shrink-0 transition-transform group-hover:translate-x-0.5"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </article>
+                                            </Link>
                                         ))}
                                     </div>
                                 ) : (
