@@ -16,7 +16,7 @@ export const PUT = async (req, { params }) =>{
     return updateTopic(req, id)
 }
 
-export const DELETE = async (_req, { params }) =>{
+export const DELETE = async (req, { params }) =>{
     const { id } = await params
     const auth = await isAuthenticated(req)
     if(!auth.user){
@@ -27,7 +27,7 @@ export const DELETE = async (_req, { params }) =>{
         return admin
     }
 
-    return deleteTopic(_req, id)
+    return deleteTopic(req, id)
 }
 
 export const GET = async (req, { params }) =>{

@@ -1,5 +1,6 @@
 "use client";
 
+import DeleteConfirmationModal from "@/app/admin/components/deleteconfirmation";
 import { useUser } from "@/context/userContext";
 import axios from "axios";
 import Link from "next/link";
@@ -22,179 +23,168 @@ import {
     Trash2,
     X,
 } from "lucide-react";
-import {
-    useParams,
-    useRouter,
-} from "next/navigation";
-import {
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
-const Topic = () => {
-    const { id } = useParams();
-    const navigate = useRouter();
+const emptySection = {
+    subHeading: "",
+    text: "",
+};
+
+const getDocumentId = (value) => {
+    if (!value) {
+        return "";
+    }
+
+    return typeof value === "object" ? String(value._id || "") : String(value);
+};
+
+const sortChapters = (chapters = []) => {
+    return [...chapters].sort((first, second) => Number(first.chapterNumber) - Number(second.chapterNumber));
+};
+
+const TopicPage = () => {
+    const params = useParams();
+    const router = useRouter();
     const { user } = useUser();
 
-    const [topic, setTopic] = useState(null);
+    const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
+    const [topic, setTopic] = useState(null);
     const [events, setEvents] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [chapters, setChapters] = useState([]);
-
-    const [selectedEvent, setSelectedEvent] =
-        useState("");
-    const [selectedSubject, setSelectedSubject] =
-        useState("");
+    const [selectedEvent, setSelectedEvent] = useState("");
+    const [selectedSubject, setSelectedSubject] = useState("");
+    const [hierarchy, setHierarchy] = useState({
+        eventName: "",
+        subjectName: "",
+        chapterName: "",
+    });
 
     const [data, setData] = useState({
         chapter: "",
         topicNumber: "",
         topicName: "",
-        sections: [],
+        sections: [{ ...emptySection }],
     });
 
-    const [loading, setLoading] =
-        useState(true);
-    const [loadingSubjects, setLoadingSubjects] =
-        useState(false);
-    const [loadingChapters, setLoadingChapters] =
-        useState(false);
-    const [editing, setEditing] =
-        useState(false);
-    const [updating, setUpdating] =
-        useState(false);
-    const [uploadingImage, setUploadingImage] =
-        useState(false);
-    const [deleting, setDeleting] =
-        useState(false);
-    const [errorMessage, setErrorMessage] =
-        useState("");
+    const [loading, setLoading] = useState(true);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
+    const [loadingChapters, setLoadingChapters] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const getId = (value) => {
-        if (!value) {
-            return "";
+    const getPageData = useCallback(async (showPageLoader = true) => {
+        if (!id) {
+            return;
         }
 
-        if (typeof value === "object") {
-            return String(value._id || "");
-        }
-
-        return String(value);
-    };
-
-    const getPageData = async () => {
         try {
-            setLoading(true);
+            if (showPageLoader) {
+                setLoading(true);
+            }
+
             setErrorMessage("");
 
-            const topicResult = await axios.get(
-                `/api/topic/${id}`,
-                {
-                    withCredentials: true,
-                },
-            );
+            const topicResult = await axios.get(`/api/topic/${id}`, {
+                withCredentials: true,
+            });
 
-            if (!topicResult.data.success) {
+            if (!topicResult.data?.success || !topicResult.data?.topic) {
                 setTopic(null);
-
-                setErrorMessage(
-                    topicResult.data.message ||
-                    "Topic could not be loaded",
-                );
-
+                setErrorMessage(topicResult.data?.message || "Topic could not be loaded");
                 return;
             }
 
-            const currentTopic =
-                topicResult.data.topic;
+            const currentTopic = topicResult.data.topic;
+            const chapterId = getDocumentId(currentTopic.chapter);
 
-            const chapterId = getId(
-                currentTopic.chapter,
-            );
+            if (!chapterId) {
+                setTopic(null);
+                setErrorMessage("The chapter connected to this topic is not available");
+                return;
+            }
 
-            const chapterResult = await axios.get(
-                `/api/chapter/${chapterId}`,
-                {
-                    withCredentials: true,
-                },
-            );
+            const chapterResult = await axios.get(`/api/chapter/${chapterId}`, {
+                withCredentials: true,
+            });
 
-            const currentChapter =
-                chapterResult.data.chapter;
+            if (!chapterResult.data?.success || !chapterResult.data?.chapter) {
+                setTopic(null);
+                setErrorMessage(chapterResult.data?.message || "Topic chapter could not be loaded");
+                return;
+            }
 
-            const subjectId = getId(
-                currentChapter.subject,
-            );
+            const currentChapter = chapterResult.data.chapter;
+            const subjectId = getDocumentId(currentChapter.subject);
 
-            const subjectResult = await axios.get(
-                `/api/subject/${subjectId}`,
-                {
-                    withCredentials: true,
-                },
-            );
+            if (!subjectId) {
+                setTopic(null);
+                setErrorMessage("The subject connected to this topic is not available");
+                return;
+            }
 
-            const currentSubject =
-                subjectResult.data.subject;
+            const subjectResult = await axios.get(`/api/subject/${subjectId}`, {
+                withCredentials: true,
+            });
 
-            const eventId = getId(
-                currentSubject.event,
-            );
+            if (!subjectResult.data?.success || !subjectResult.data?.subject) {
+                setTopic(null);
+                setErrorMessage(subjectResult.data?.message || "Topic subject could not be loaded");
+                return;
+            }
 
-            const [
-                eventsResult,
-                subjectsResult,
-                chaptersResult,
-            ] = await Promise.all([
+            const currentSubject = subjectResult.data.subject;
+            const eventId = getDocumentId(currentSubject.event);
+
+            if (!eventId) {
+                setTopic(null);
+                setErrorMessage("The event connected to this topic is not available");
+                return;
+            }
+
+            const [eventsResult, subjectsResult, chaptersResult] = await Promise.allSettled([
                 axios.get("/api/events", {
                     withCredentials: true,
                 }),
-
-                axios.get(
-                    `/api/events/${eventId}/subjects`,
-                    {
-                        withCredentials: true,
-                    },
-                ),
-
-                axios.get(
-                    `/api/chapter/subject/${subjectId}`,
-                    {
-                        withCredentials: true,
-                    },
-                ),
+                axios.get(`/api/events/${eventId}/subjects`, {
+                    withCredentials: true,
+                }),
+                axios.get(`/api/chapter/subject/${subjectId}`, {
+                    withCredentials: true,
+                }),
             ]);
 
-            const sortedChapters = [
-                ...(chaptersResult.data.chapters ||
-                    []),
-            ].sort(
-                (
-                    firstChapter,
-                    secondChapter,
-                ) =>
-                    Number(
-                        firstChapter.chapterNumber,
-                    ) -
-                    Number(
-                        secondChapter.chapterNumber,
-                    ),
-            );
+            const eventData = eventsResult.status === "fulfilled" ? eventsResult.value.data : null;
+            const subjectData = subjectsResult.status === "fulfilled" ? subjectsResult.value.data : null;
+            const chapterData = chaptersResult.status === "fulfilled" ? chaptersResult.value.data : null;
 
-            setEvents(
-                eventsResult.data.event || [],
-            );
+            const availableEvents = eventData?.event || eventData?.events || [];
+            const availableSubjects = subjectData?.subjects || [];
+            const availableChapters = sortChapters(chapterData?.chapters || []);
 
-            setSubjects(
-                subjectsResult.data.subjects || [],
-            );
+            const eventName =
+                typeof currentSubject.event === "object"
+                    ? currentSubject.event?.name || ""
+                    : availableEvents.find((event) => String(event._id) === String(eventId))?.name || "";
 
-            setChapters(sortedChapters);
-
+            setEvents(availableEvents);
+            setSubjects(availableSubjects);
+            setChapters(availableChapters);
             setSelectedEvent(eventId);
             setSelectedSubject(subjectId);
+
+            setHierarchy({
+                eventName: eventName || "Not available",
+                subjectName: currentSubject.name || "Not available",
+                chapterName: currentChapter.chapterName || "Not available",
+            });
 
             setTopic({
                 ...currentTopic,
@@ -203,122 +193,67 @@ const Topic = () => {
 
             setData({
                 chapter: chapterId,
-                topicNumber:
-                    currentTopic.topicNumber ?? "",
-                topicName:
-                    currentTopic.topicName || "",
+                topicNumber: currentTopic.topicNumber ?? "",
+                topicName: currentTopic.topicName || "",
                 sections:
                     currentTopic.sections?.length > 0
-                        ? currentTopic.sections.map(
-                            (section) => ({
-                                _id:
-                                    section._id ||
-                                    undefined,
-                                subHeading:
-                                    section.subHeading ||
-                                    "",
-                                text:
-                                    section.text ||
-                                    "",
-                            }),
-                        )
-                        : [
-                            {
-                                subHeading: "",
-                                text: "",
-                            },
-                        ],
+                        ? currentTopic.sections.map((section) => ({
+                            _id: section._id || undefined,
+                            subHeading: section.subHeading || "",
+                            text: section.text || "",
+                        }))
+                        : [{ ...emptySection }],
             });
         } catch (error) {
             console.log(error);
-            setTopic(null);
 
-            setErrorMessage(
-                error.response?.data?.message ||
-                "Topic could not be loaded",
-            );
+            setTopic(null);
+            setErrorMessage(error.response?.data?.message || "Topic could not be loaded");
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     const getSubjects = async (eventId) => {
         try {
             setLoadingSubjects(true);
 
-            const result = await axios.get(
-                `/api/events/${eventId}/subjects`,
-                {
-                    withCredentials: true,
-                },
-            );
+            const result = await axios.get(`/api/events/${eventId}/subjects`, {
+                withCredentials: true,
+            });
 
-            if (result.data.success) {
-                setSubjects(
-                    result.data.subjects || [],
-                );
-            }
+            setSubjects(result.data?.success ? result.data.subjects || [] : []);
         } catch (error) {
             console.log(error);
             setSubjects([]);
 
             if (error.response?.status !== 404) {
-                toast.error(
-                    error.response?.data?.message ||
-                    "Subjects could not be loaded",
-                    {
-                        autoClose: 3000,
-                    },
-                );
+                toast.error(error.response?.data?.message || "Subjects could not be loaded", {
+                    autoClose: 3000,
+                });
             }
         } finally {
             setLoadingSubjects(false);
         }
     };
 
-    const getChapters = async (
-        subjectId,
-    ) => {
+    const getChapters = async (subjectId) => {
         try {
             setLoadingChapters(true);
 
-            const result = await axios.get(
-                `/api/chapter/subject/${subjectId}`,
-                {
-                    withCredentials: true,
-                },
-            );
+            const result = await axios.get(`/api/chapter/subject/${subjectId}`, {
+                withCredentials: true,
+            });
 
-            if (result.data.success) {
-                const sortedChapters = [
-                    ...(result.data.chapters || []),
-                ].sort(
-                    (
-                        firstChapter,
-                        secondChapter,
-                    ) =>
-                        Number(
-                            firstChapter.chapterNumber,
-                        ) -
-                        Number(
-                            secondChapter.chapterNumber,
-                        ),
-                );
-
-                setChapters(sortedChapters);
-            }
+            setChapters(result.data?.success ? sortChapters(result.data.chapters || []) : []);
         } catch (error) {
             console.log(error);
             setChapters([]);
 
             if (error.response?.status !== 404) {
-                toast.error(
-                    error.response?.data?.message ||
-                    "Chapters could not be loaded",
-                    {
-                        autoClose: 3000,
-                    },
-                );
+                toast.error(error.response?.data?.message || "Chapters could not be loaded", {
+                    autoClose: 3000,
+                });
             }
         } finally {
             setLoadingChapters(false);
@@ -330,7 +265,6 @@ const Topic = () => {
 
         setSelectedEvent(eventId);
         setSelectedSubject("");
-
         setSubjects([]);
         setChapters([]);
 
@@ -369,22 +303,16 @@ const Topic = () => {
         }));
     };
 
-    const updateSection = (
-        index,
-        field,
-        value,
-    ) => {
+    const updateSection = (index, field, value) => {
         setData((previous) => ({
             ...previous,
-
-            sections: previous.sections.map(
-                (section, sectionIndex) =>
-                    sectionIndex === index
-                        ? {
-                            ...section,
-                            [field]: value,
-                        }
-                        : section,
+            sections: previous.sections.map((section, sectionIndex) =>
+                sectionIndex === index
+                    ? {
+                        ...section,
+                        [field]: value,
+                    }
+                    : section,
             ),
         }));
     };
@@ -392,113 +320,91 @@ const Topic = () => {
     const addSection = () => {
         setData((previous) => ({
             ...previous,
-
-            sections: [
-                ...previous.sections,
-                {
-                    subHeading: "",
-                    text: "",
-                },
-            ],
+            sections: [...previous.sections, { ...emptySection }],
         }));
     };
 
     const removeSection = (index) => {
         if (data.sections.length === 1) {
-            toast.error(
-                "A topic must have at least one section",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("A topic must have at least one section", {
+                autoClose: 3000,
+            });
 
             return;
         }
 
         setData((previous) => ({
             ...previous,
-
-            sections: previous.sections.filter(
-                (_, sectionIndex) =>
-                    sectionIndex !== index,
-            ),
+            sections: previous.sections.filter((_, sectionIndex) => sectionIndex !== index),
         }));
     };
 
-    const updateTopic = async () => {
+    const validateTopic = () => {
         if (!selectedEvent) {
-            toast.error(
-                "Please select an event",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Please select an event", {
+                autoClose: 3000,
+            });
 
-            return;
+            return false;
         }
 
         if (!selectedSubject) {
-            toast.error(
-                "Please select a subject",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Please select a subject", {
+                autoClose: 3000,
+            });
 
-            return;
+            return false;
         }
 
         if (!data.chapter) {
-            toast.error(
-                "Please select a chapter",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Please select a chapter", {
+                autoClose: 3000,
+            });
 
-            return;
+            return false;
         }
 
-        if (
-            !data.topicNumber ||
-            Number(data.topicNumber) < 1
-        ) {
-            toast.error(
-                "Please enter a valid topic number",
-                {
-                    autoClose: 3000,
-                },
-            );
+        if (!data.topicNumber || Number(data.topicNumber) < 1) {
+            toast.error("Please enter a valid topic number", {
+                autoClose: 3000,
+            });
 
-            return;
+            return false;
         }
 
         if (!data.topicName.trim()) {
-            toast.error(
-                "Topic name is required",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Topic name is required", {
+                autoClose: 3000,
+            });
 
-            return;
+            return false;
         }
 
-        const incompleteSection =
-            data.sections.some(
-                (section) =>
-                    !section.subHeading.trim() ||
-                    !section.text.trim(),
-            );
+        if (!data.sections.length) {
+            toast.error("At least one section is required", {
+                autoClose: 3000,
+            });
+
+            return false;
+        }
+
+        const incompleteSection = data.sections.some(
+            (section) => !section.subHeading.trim() || !section.text.trim(),
+        );
 
         if (incompleteSection) {
-            toast.error(
-                "Complete every topic section",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Complete every topic section", {
+                autoClose: 3000,
+            });
 
+            return false;
+        }
+
+        return true;
+    };
+
+    const updateTopic = async () => {
+        if (!validateTopic() || updating) {
             return;
         }
 
@@ -507,200 +413,171 @@ const Topic = () => {
 
             const payload = {
                 chapter: data.chapter,
-
-                topicNumber: Number(
-                    data.topicNumber,
-                ),
-
-                topicName:
-                    data.topicName.trim(),
-
-                sections: data.sections.map(
-                    (section) => ({
-                        subHeading:
-                            section.subHeading.trim(),
-                        text: section.text.trim(),
-                    }),
-                ),
+                topicNumber: Number(data.topicNumber),
+                topicName: data.topicName.trim(),
+                sections: data.sections.map((section) => ({
+                    subHeading: section.subHeading.trim(),
+                    text: section.text.trim(),
+                })),
             };
 
-            const result = await axios.put(
-                `/api/topic/${id}`,
-                payload,
-                {
-                    withCredentials: true,
-                },
-            );
+            const result = await axios.put(`/api/topic/${id}`, payload, {
+                withCredentials: true,
+            });
 
-            if (result.data.success) {
-                toast.success(
-                    result.data.message ||
-                    "Topic is updated",
-                    {
-                        autoClose: 3000,
-                    },
-                );
+            if (!result.data?.success) {
+                toast.error(result.data?.message || "Topic could not be updated", {
+                    autoClose: 3000,
+                });
 
-                setEditing(false);
-
-                await getPageData();
+                return;
             }
+
+            toast.success(result.data.message || "Topic is updated", {
+                autoClose: 3000,
+            });
+
+            setEditing(false);
+            await getPageData(false);
         } catch (error) {
             console.log(error);
 
-            toast.error(
-                error.response?.data?.message ||
-                "Topic could not be updated",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error(error.response?.data?.message || "Topic could not be updated", {
+                autoClose: 3000,
+            });
         } finally {
             setUpdating(false);
         }
     };
 
     const updateImage = async (event) => {
-        const file =
-            event.target.files?.[0];
+        const input = event.target;
+        const file = input.files?.[0];
 
         if (!file) {
             return;
         }
 
         if (!file.type.startsWith("image/")) {
-            toast.error(
-                "Only image files are allowed",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Only image files are allowed", {
+                autoClose: 3000,
+            });
 
-            event.target.value = "";
-
+            input.value = "";
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            toast.error(
-                "Image size cannot be greater than 5MB",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error("Image size cannot be greater than 5MB", {
+                autoClose: 3000,
+            });
 
-            event.target.value = "";
-
+            input.value = "";
             return;
         }
 
         try {
             setUploadingImage(true);
 
-            const result = await axios.put(
-                `/api/topic/${id}/image`,
-                file,
-                {
-                    headers: {
-                        "Content-Type": file.type,
-                    },
-
-                    withCredentials: true,
+            const result = await axios.put(`/api/topic/${id}/image`, file, {
+                headers: {
+                    "Content-Type": file.type,
                 },
-            );
+                withCredentials: true,
+            });
 
-            if (result.data.success) {
-                const refreshedTopic =
-                    await axios.get(
-                        `/api/topic/${id}`,
-                        {
-                            withCredentials: true,
-                        },
-                    );
+            if (!result.data?.success) {
+                toast.error(result.data?.message || "Topic image could not be updated", {
+                    autoClose: 3000,
+                });
 
-                if (
-                    refreshedTopic.data.success
-                ) {
-                    setTopic((previous) => ({
-                        ...previous,
-                        ...refreshedTopic.data
-                            .topic,
-                    }));
-                }
-
-                toast.success(
-                    result.data.message ||
-                    "Topic image is updated",
-                    {
-                        autoClose: 3000,
-                    },
-                );
+                return;
             }
+
+            const refreshedTopic = await axios.get(`/api/topic/${id}`, {
+                withCredentials: true,
+            });
+
+            if (refreshedTopic.data?.success && refreshedTopic.data?.topic) {
+                setTopic((previous) => ({
+                    ...previous,
+                    ...refreshedTopic.data.topic,
+                    chapter: previous.chapter,
+                }));
+            }
+
+            toast.success(result.data.message || "Topic image is updated", {
+                autoClose: 3000,
+            });
         } catch (error) {
             console.log(error);
 
-            toast.error(
-                error.response?.data?.message ||
-                "Topic image could not be updated",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error(error.response?.data?.message || "Topic image could not be updated", {
+                autoClose: 3000,
+            });
         } finally {
             setUploadingImage(false);
-            event.target.value = "";
+            input.value = "";
         }
     };
 
-    const deleteTopic = async () => {
-        const confirmed = window.confirm(
-            `Are you sure you want to delete "${topic.topicName}"?`,
-        );
+    const openDeleteModal = () => {
+        if (!deleting) {
+            setShowDeleteModal(true);
+        }
+    };
 
-        if (!confirmed) {
+    const closeDeleteModal = useCallback(() => {
+        if (!deleting) {
+            setShowDeleteModal(false);
+        }
+    }, [deleting]);
+
+    const deleteTopic = async () => {
+        if (!id || deleting) {
             return;
         }
 
         try {
             setDeleting(true);
 
-            const result = await axios.delete(
-                `/api/topic/${id}`,
-                {
-                    withCredentials: true,
-                },
-            );
+            const result = await axios.delete(`/api/topic/${id}`, {
+                withCredentials: true,
+            });
 
-            if (result.data.success) {
-                toast.success(
-                    result.data.message ||
-                    "Topic is deleted",
-                    {
-                        autoClose: 3000,
-                    },
-                );
+            if (!result.data?.success) {
+                toast.error(result.data?.message || "Topic could not be deleted", {
+                    autoClose: 3000,
+                });
 
-                navigate.push("/admin/topics");
+                return;
             }
+
+            setShowDeleteModal(false);
+
+            toast.success(result.data.message || "Topic is deleted", {
+                autoClose: 3000,
+            });
+
+            router.replace("/admin/topics");
         } catch (error) {
             console.log(error);
 
-            toast.error(
-                error.response?.data?.message ||
-                "Topic could not be deleted",
-                {
-                    autoClose: 3000,
-                },
-            );
+            toast.error(error.response?.data?.message || "Topic could not be deleted", {
+                autoClose: 3000,
+            });
         } finally {
             setDeleting(false);
         }
     };
 
     const cancelUpdate = async () => {
-        setEditing(false);
+        if (updating) {
+            return;
+        }
 
-        await getPageData();
+        setEditing(false);
+        await getPageData(false);
     };
 
     const formatDate = (date) => {
@@ -708,42 +585,35 @@ const Topic = () => {
             return "Not available";
         }
 
-        return new Intl.DateTimeFormat(
-            "en-PK",
-            {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-            },
-        ).format(new Date(date));
+        const parsedDate = new Date(date);
+
+        if (Number.isNaN(parsedDate.getTime())) {
+            return "Not available";
+        }
+
+        return new Intl.DateTimeFormat("en-PK", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }).format(parsedDate);
     };
 
     useEffect(() => {
-        if (id) {
-            getPageData();
-        }
-    }, [id]);
+        getPageData();
+    }, [getPageData]);
 
     const eventName =
-        events.find(
-            (event) =>
-                String(event._id) ===
-                String(selectedEvent),
-        )?.name || "Not available";
+        events.find((event) => String(event._id) === String(selectedEvent))?.name ||
+        hierarchy.eventName ||
+        "Not available";
 
     const subjectName =
-        subjects.find(
-            (subject) =>
-                String(subject._id) ===
-                String(selectedSubject),
-        )?.name || "Not available";
+        subjects.find((subject) => String(subject._id) === String(selectedSubject))?.name ||
+        hierarchy.subjectName ||
+        "Not available";
 
     const selectedChapter =
-        chapters.find(
-            (chapter) =>
-                String(chapter._id) ===
-                String(data.chapter),
-        ) || null;
+        chapters.find((chapter) => String(chapter._id) === String(data.chapter)) || null;
 
     if (loading) {
         return (
@@ -758,14 +628,7 @@ const Topic = () => {
         return (
             <div className="min-h-screen bg-[#f5f7fb]">
                 <AdminHeader user={user} />
-
-                <TopicError
-                    message={
-                        errorMessage ||
-                        "Topic is not available"
-                    }
-                    onRetry={getPageData}
-                />
+                <TopicError message={errorMessage || "Topic is not available"} onRetry={() => getPageData()} />
             </div>
         );
     }
@@ -775,18 +638,13 @@ const Topic = () => {
             <AdminHeader user={user} />
 
             <main className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-                <nav className="mb-5 flex items-center gap-2 text-xs sm:text-sm">
-                    <Link
-                        href="/admin/topics"
-                        className="flex items-center gap-1.5 font-semibold text-slate-500 transition hover:text-blue-700"
-                    >
+                <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-2 text-xs sm:text-sm">
+                    <Link href="/admin/topics" className="flex items-center gap-1.5 font-semibold text-slate-500 transition hover:text-blue-700">
                         <ArrowLeft size={16} />
                         Topics
                     </Link>
 
-                    <span className="text-slate-300">
-                        /
-                    </span>
+                    <span className="text-slate-300">/</span>
 
                     <span className="max-w-52 truncate font-semibold text-blue-700">
                         {topic.topicName}
@@ -794,30 +652,22 @@ const Topic = () => {
                 </nav>
 
                 <section className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                    <div>
+                    <div className="min-w-0">
                         <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-600">
                             Topic management
                         </p>
 
-                        <h1 className="mt-1.5 text-xl font-black tracking-tight text-[#071a4a] sm:text-2xl">
+                        <h1 className="mt-1.5 truncate text-xl font-black tracking-tight text-[#071a4a] sm:text-2xl">
                             Manage {topic.topicName}
                         </h1>
 
                         <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
-                            Update the topic hierarchy,
-                            information, content sections and
-                            topic image.
+                            Update the topic hierarchy, information, content sections and topic image.
                         </p>
                     </div>
 
                     {!editing && (
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setEditing(true)
-                            }
-                            className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto"
-                        >
+                        <button type="button" onClick={() => setEditing(true)} className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto">
                             <Pencil size={15} />
                             Update Topic
                         </button>
@@ -837,93 +687,49 @@ const Topic = () => {
                                 </h2>
                             </div>
 
-                            <label
-                                htmlFor="topic-image"
-                                className={`group relative block overflow-hidden ${uploadingImage
-                                        ? "cursor-wait"
-                                        : "cursor-pointer"
-                                    }`}
-                            >
-                                <div className="h-64 bg-slate-100 sm:h-72 lg:h-64">
+                            <label htmlFor="topic-image" className={`group relative block overflow-hidden ${uploadingImage ? "cursor-wait" : "cursor-pointer"}`}>
+                                <div className="h-64 bg-slate-100">
                                     {topic.image?.url ? (
-                                        <img
-                                            src={
-                                                topic.image
-                                                    .url
-                                            }
-                                            alt={
-                                                topic.topicName
-                                            }
-                                            className="h-full w-full object-cover"
-                                        />
+                                        <img src={topic.image.url} alt={topic.topicName} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                                     ) : (
-                                        <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-5 text-center">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-                                                <BookOpenText
-                                                    size={
-                                                        24
-                                                    }
-                                                />
+                                        <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-6 text-center">
+                                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
+                                                <BookOpenText size={27} strokeWidth={1.8} />
                                             </div>
 
                                             <p className="mt-3 text-xs font-extrabold text-[#071a4a]">
-                                                No Topic Image
+                                                No topic image
                                             </p>
 
-                                            <p className="mt-1 text-[9px] leading-4 text-slate-500">
-                                                Select an image
-                                                up to 5MB.
+                                            <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                                                Upload an image with a maximum size of 5MB.
                                             </p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="absolute inset-0 flex items-center justify-center bg-[#071a4a]/65 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-                                    {uploadingImage ? (
-                                        <div className="text-center text-white">
-                                            <LoaderCircle
-                                                size={25}
-                                                className="mx-auto animate-spin"
-                                            />
-
-                                            <p className="mt-2 text-xs font-bold">
+                                <div className="absolute inset-0 flex items-end bg-gradient-to-t from-slate-950/70 via-transparent to-transparent p-4 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                                    <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/95 px-4 py-2.5 text-xs font-bold text-blue-700 shadow-lg backdrop-blur-sm">
+                                        {uploadingImage ? (
+                                            <>
+                                                <LoaderCircle size={16} className="animate-spin" />
                                                 Uploading...
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center text-white">
-                                            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-md">
-                                                <ImagePlus
-                                                    size={
-                                                        20
-                                                    }
-                                                />
-                                            </div>
-
-                                            <p className="mt-2 text-xs font-bold">
-                                                {topic.image
-                                                    ?.url
-                                                    ? "Replace Image"
-                                                    : "Add Image"}
-                                            </p>
-                                        </div>
-                                    )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ImagePlus size={16} />
+                                                {topic.image?.url ? "Change Image" : "Upload Image"}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </label>
 
-                            <input
-                                id="topic-image"
-                                type="file"
-                                accept="image/*"
-                                onChange={updateImage}
-                                disabled={uploadingImage}
-                                className="hidden"
-                            />
+                            <input id="topic-image" type="file" accept="image/*" onChange={updateImage} disabled={uploadingImage} className="hidden" />
 
-                            <div className="border-t border-slate-100 p-4">
+                            <div className="border-t border-slate-200 px-4 py-3">
                                 <p className="text-[9px] leading-4 text-slate-500">
-                                    Recommended: a clear,
-                                    landscape educational image.
+                                    JPG, PNG, WEBP or another supported image format. Maximum size: 5MB.
                                 </p>
                             </div>
                         </section>
@@ -931,33 +737,18 @@ const Topic = () => {
                         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                             <div className="border-b border-slate-200 px-4 py-4">
                                 <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-blue-600">
-                                    Content hierarchy
+                                    Connected hierarchy
                                 </p>
 
                                 <h2 className="mt-1 text-sm font-extrabold text-[#071a4a]">
-                                    Topic location
+                                    Content location
                                 </h2>
                             </div>
 
-                            <div className="space-y-2.5 p-4">
-                                <HierarchyItem
-                                    label="Event"
-                                    value={eventName}
-                                />
-
-                                <HierarchyItem
-                                    label="Subject"
-                                    value={subjectName}
-                                />
-
-                                <HierarchyItem
-                                    label="Chapter"
-                                    value={
-                                        selectedChapter
-                                            ? `Chapter ${selectedChapter.chapterNumber}: ${selectedChapter.chapterName}`
-                                            : "Not available"
-                                    }
-                                />
+                            <div className="space-y-3 p-4">
+                                <HierarchyItem label="Event" value={eventName} />
+                                <HierarchyItem label="Subject" value={subjectName} />
+                                <HierarchyItem label="Chapter" value={selectedChapter?.chapterName || hierarchy.chapterName} />
                             </div>
                         </section>
                     </div>
@@ -966,307 +757,75 @@ const Topic = () => {
                         {editing ? (
                             <>
                                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                    <SectionHeader
-                                        title="Content hierarchy"
-                                        description="Change where this topic belongs."
-                                        icon={Layers3}
-                                    />
+                                    <SectionHeader title="Topic hierarchy" description="Choose the event, subject and chapter for this topic." icon={Layers3} />
 
-                                    <div className="space-y-4 p-5 sm:p-6">
-                                        <SelectField
-                                            id="event"
-                                            label="Event"
-                                            value={
-                                                selectedEvent
-                                            }
-                                            onChange={
-                                                selectEvent
-                                            }
-                                            disabled={
-                                                updating
-                                            }
-                                            placeholder="Select an event"
-                                            options={events.map(
-                                                (
-                                                    event,
-                                                ) => ({
-                                                    value:
-                                                        event._id,
-                                                    label:
-                                                        event.name,
-                                                }),
-                                            )}
-                                        />
+                                    <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+                                        <SelectField id="event" label="Event" value={selectedEvent} onChange={selectEvent} disabled={updating} loading={false} placeholder="Select an event" options={events.map((event) => ({ value: event._id, label: event.name }))} />
 
-                                        <SelectField
-                                            id="subject"
-                                            label="Subject"
-                                            value={
-                                                selectedSubject
-                                            }
-                                            onChange={
-                                                selectSubject
-                                            }
-                                            disabled={
-                                                !selectedEvent ||
-                                                loadingSubjects ||
-                                                updating
-                                            }
-                                            loading={
-                                                loadingSubjects
-                                            }
-                                            placeholder={
-                                                !selectedEvent
-                                                    ? "Select an event first"
-                                                    : loadingSubjects
-                                                        ? "Loading subjects..."
-                                                        : subjects.length ===
-                                                            0
-                                                            ? "No subjects available"
-                                                            : "Select a subject"
-                                            }
-                                            options={subjects.map(
-                                                (
-                                                    subject,
-                                                ) => ({
-                                                    value:
-                                                        subject._id,
-                                                    label:
-                                                        subject.name,
-                                                }),
-                                            )}
-                                        />
+                                        <SelectField id="subject" label="Subject" value={selectedSubject} onChange={selectSubject} disabled={!selectedEvent || loadingSubjects || updating} loading={loadingSubjects} placeholder={loadingSubjects ? "Loading subjects..." : "Select a subject"} options={subjects.map((subject) => ({ value: subject._id, label: subject.name }))} />
 
-                                        <SelectField
-                                            id="chapter"
-                                            name="chapter"
-                                            label="Chapter"
-                                            value={
-                                                data.chapter
-                                            }
-                                            onChange={
-                                                fillTopicData
-                                            }
-                                            disabled={
-                                                !selectedSubject ||
-                                                loadingChapters ||
-                                                updating
-                                            }
-                                            loading={
-                                                loadingChapters
-                                            }
-                                            placeholder={
-                                                !selectedSubject
-                                                    ? "Select a subject first"
-                                                    : loadingChapters
-                                                        ? "Loading chapters..."
-                                                        : chapters.length ===
-                                                            0
-                                                            ? "No chapters available"
-                                                            : "Select a chapter"
-                                            }
-                                            options={chapters.map(
-                                                (
-                                                    chapter,
-                                                ) => ({
-                                                    value:
-                                                        chapter._id,
-                                                    label: `Chapter ${chapter.chapterNumber}: ${chapter.chapterName}`,
-                                                }),
-                                            )}
-                                        />
+                                        <div className="sm:col-span-2">
+                                            <SelectField id="chapter" name="chapter" label="Chapter" value={data.chapter} onChange={fillTopicData} disabled={!selectedSubject || loadingChapters || updating} loading={loadingChapters} placeholder={loadingChapters ? "Loading chapters..." : "Select a chapter"} options={chapters.map((chapter) => ({ value: chapter._id, label: `Chapter ${chapter.chapterNumber}: ${chapter.chapterName}` }))} />
+                                        </div>
                                     </div>
                                 </section>
 
                                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                    <SectionHeader
-                                        title="Topic information"
-                                        description="Update the topic number and name."
-                                        icon={
-                                            BookOpenText
-                                        }
-                                    />
+                                    <SectionHeader title="Topic information" description="Update the topic number and topic name." icon={BookOpenText} />
 
-                                    <div className="grid gap-4 p-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:p-6">
-                                        <InputField
-                                            id="topicNumber"
-                                            name="topicNumber"
-                                            label="Topic number"
-                                            type="number"
-                                            min="1"
-                                            value={
-                                                data.topicNumber
-                                            }
-                                            onChange={
-                                                fillTopicData
-                                            }
-                                            disabled={
-                                                updating
-                                            }
-                                            placeholder="For example: 1"
-                                        />
+                                    <div className="grid gap-4 p-5 sm:grid-cols-[180px_minmax(0,1fr)] sm:p-6">
+                                        <InputField id="topicNumber" name="topicNumber" label="Topic number" type="number" min="1" value={data.topicNumber} onChange={fillTopicData} disabled={updating} placeholder="1" />
 
-                                        <InputField
-                                            id="topicName"
-                                            name="topicName"
-                                            label="Topic name"
-                                            type="text"
-                                            value={
-                                                data.topicName
-                                            }
-                                            onChange={
-                                                fillTopicData
-                                            }
-                                            disabled={
-                                                updating
-                                            }
-                                            placeholder="Enter topic name"
-                                        />
+                                        <InputField id="topicName" name="topicName" label="Topic name" type="text" value={data.topicName} onChange={fillTopicData} disabled={updating} placeholder="Enter topic name" />
                                     </div>
                                 </section>
 
                                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                    <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                                        <div className="flex items-start gap-3">
+                                    <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
+                                        <div className="flex min-w-0 items-start gap-3">
                                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                                <FileText
-                                                    size={
-                                                        18
-                                                    }
-                                                />
+                                                <FileText size={18} />
                                             </div>
 
-                                            <div>
+                                            <div className="min-w-0">
                                                 <h2 className="text-base font-extrabold text-[#071a4a]">
-                                                    Topic
-                                                    sections
+                                                    Content sections
                                                 </h2>
 
                                                 <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">
-                                                    Update,
-                                                    add or
-                                                    remove
-                                                    content
-                                                    sections.
+                                                    Add as many subheadings and explanations as required.
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                addSection
-                                            }
-                                            disabled={
-                                                updating
-                                            }
-                                            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60 sm:w-auto"
-                                        >
-                                            <Plus
-                                                size={
-                                                    14
-                                                }
-                                            />
+                                        <button type="button" onClick={addSection} disabled={updating} className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-[10px] font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+                                            <Plus size={14} />
                                             Add Section
                                         </button>
                                     </div>
 
                                     <div className="space-y-4 bg-slate-50/70 p-4 sm:p-5">
-                                        {data.sections.map(
-                                            (
-                                                section,
-                                                index,
-                                            ) => (
-                                                <SectionEditor
-                                                    key={
-                                                        section._id ||
-                                                        index
-                                                    }
-                                                    section={
-                                                        section
-                                                    }
-                                                    index={
-                                                        index
-                                                    }
-                                                    updateSection={
-                                                        updateSection
-                                                    }
-                                                    removeSection={
-                                                        removeSection
-                                                    }
-                                                    disabled={
-                                                        updating
-                                                    }
-                                                    canRemove={
-                                                        data
-                                                            .sections
-                                                            .length >
-                                                        1
-                                                    }
-                                                />
-                                            ),
-                                        )}
-
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                addSection
-                                            }
-                                            disabled={
-                                                updating
-                                            }
-                                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50/50 px-4 py-3 text-xs font-bold text-blue-700 transition hover:bg-blue-50 disabled:opacity-60"
-                                        >
-                                            <Plus
-                                                size={16}
-                                            />
-                                            Add another section
-                                        </button>
+                                        {data.sections.map((section, index) => (
+                                            <SectionEditor key={section._id || index} section={section} index={index} updateSection={updateSection} removeSection={removeSection} disabled={updating} canRemove={data.sections.length > 1} />
+                                        ))}
                                     </div>
                                 </section>
 
-                                <section className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:justify-end sm:p-5">
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            cancelUpdate
-                                        }
-                                        disabled={
-                                            updating
-                                        }
-                                        className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
-                                    >
-                                        <X size={15} />
+                                <section className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:justify-end">
+                                    <button type="button" onClick={cancelUpdate} disabled={updating} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+                                        <X size={16} />
                                         Cancel
                                     </button>
 
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            updateTopic
-                                        }
-                                        disabled={
-                                            updating
-                                        }
-                                        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-xs font-bold text-white transition hover:bg-blue-700 disabled:bg-blue-400"
-                                    >
+                                    <button type="button" onClick={updateTopic} disabled={updating} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
                                         {updating ? (
                                             <>
-                                                <LoaderCircle
-                                                    size={
-                                                        16
-                                                    }
-                                                    className="animate-spin"
-                                                />
+                                                <LoaderCircle size={16} className="animate-spin" />
                                                 Updating...
                                             </>
                                         ) : (
                                             <>
-                                                <Save
-                                                    size={
-                                                        16
-                                                    }
-                                                />
+                                                <Save size={16} />
                                                 Save Changes
                                             </>
                                         )}
@@ -1276,123 +835,66 @@ const Topic = () => {
                         ) : (
                             <>
                                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                    <SectionHeader
-                                        title="Topic information"
-                                        description="Current topic details and hierarchy."
-                                        icon={
-                                            BookOpenText
-                                        }
-                                    />
+                                    <SectionHeader title="Topic information" description="Current topic details and hierarchy." icon={BookOpenText} />
 
                                     <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
-                                        <DetailCard
-                                            label="Topic number"
-                                            value={`Topic ${topic.topicNumber}`}
-                                        />
-
-                                        <DetailCard
-                                            label="Topic name"
-                                            value={
-                                                topic.topicName
-                                            }
-                                        />
-
-                                        <DetailCard
-                                            label="Created"
-                                            value={formatDate(
-                                                topic.createdAt,
-                                            )}
-                                            icon={
-                                                CalendarDays
-                                            }
-                                        />
-
-                                        <DetailCard
-                                            label="Last updated"
-                                            value={formatDate(
-                                                topic.updatedAt,
-                                            )}
-                                            icon={
-                                                CalendarDays
-                                            }
-                                        />
+                                        <DetailCard label="Topic number" value={`Topic ${topic.topicNumber}`} />
+                                        <DetailCard label="Topic name" value={topic.topicName} />
+                                        <DetailCard label="Created" value={formatDate(topic.createdAt)} icon={CalendarDays} />
+                                        <DetailCard label="Last updated" value={formatDate(topic.updatedAt)} icon={CalendarDays} />
                                     </div>
                                 </section>
 
                                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                                     <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
-                                        <div className="flex items-start gap-3">
+                                        <div className="flex min-w-0 items-start gap-3">
                                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                                <FileText
-                                                    size={
-                                                        18
-                                                    }
-                                                />
+                                                <FileText size={18} />
                                             </div>
 
-                                            <div>
+                                            <div className="min-w-0">
                                                 <h2 className="text-base font-extrabold text-[#071a4a]">
-                                                    Content
-                                                    sections
+                                                    Content sections
                                                 </h2>
 
                                                 <p className="mt-1 text-[10px] text-slate-500 sm:text-xs">
-                                                    Topic
-                                                    explanation
-                                                    organized
-                                                    under
-                                                    subheadings.
+                                                    Topic explanation organized under subheadings.
                                                 </p>
                                             </div>
                                         </div>
 
                                         <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-extrabold text-blue-700">
-                                            {
-                                                topic
-                                                    .sections
-                                                    ?.length
-                                            }{" "}
-                                            sections
+                                            {topic.sections?.length || 0} sections
                                         </span>
                                     </div>
 
-                                    <div className="space-y-3 bg-slate-50/70 p-4 sm:p-5">
-                                        {topic.sections?.map(
-                                            (
-                                                section,
-                                                index,
-                                            ) => (
-                                                <article
-                                                    key={
-                                                        section._id ||
-                                                        index
-                                                    }
-                                                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                                                >
+                                    {topic.sections?.length > 0 ? (
+                                        <div className="space-y-3 bg-slate-50/70 p-4 sm:p-5">
+                                            {topic.sections.map((section, index) => (
+                                                <article key={section._id || index} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                     <div className="flex items-start gap-3">
                                                         <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-2 text-[10px] font-bold text-white">
-                                                            {index +
-                                                                1}
+                                                            {index + 1}
                                                         </span>
 
                                                         <div className="min-w-0 flex-1">
                                                             <h3 className="text-sm font-extrabold text-[#071a4a]">
-                                                                {
-                                                                    section.subHeading
-                                                                }
+                                                                {section.subHeading}
                                                             </h3>
 
                                                             <p className="mt-2 whitespace-pre-line text-xs leading-6 text-slate-600 sm:text-sm">
-                                                                {
-                                                                    section.text
-                                                                }
+                                                                {section.text}
                                                             </p>
                                                         </div>
                                                     </div>
                                                 </article>
-                                            ),
-                                        )}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-6 text-center text-xs text-slate-500">
+                                            No content sections are available.
+                                        </div>
+                                    )}
                                 </section>
 
                                 <section className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
@@ -1403,46 +905,13 @@ const Topic = () => {
                                             </h2>
 
                                             <p className="mt-1 text-[10px] leading-5 text-red-600 sm:text-xs">
-                                                This action
-                                                permanently
-                                                removes the
-                                                topic, its
-                                                sections and
-                                                image.
+                                                Permanently remove this topic, its content sections and uploaded image.
                                             </p>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                deleteTopic
-                                            }
-                                            disabled={
-                                                deleting
-                                            }
-                                            className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-700 disabled:bg-red-400 sm:w-auto"
-                                        >
-                                            {deleting ? (
-                                                <>
-                                                    <LoaderCircle
-                                                        size={
-                                                            15
-                                                        }
-                                                        className="animate-spin"
-                                                    />
-                                                    Deleting...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Trash2
-                                                        size={
-                                                            15
-                                                        }
-                                                    />
-                                                    Delete
-                                                    Topic
-                                                </>
-                                            )}
+                                        <button type="button" onClick={openDeleteModal} disabled={deleting} className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400 sm:w-auto">
+                                            <Trash2 size={15} />
+                                            Delete Topic
                                         </button>
                                     </div>
                                 </section>
@@ -1451,14 +920,13 @@ const Topic = () => {
                     </div>
                 </div>
             </main>
+
+            <DeleteConfirmationModal open={showDeleteModal} title="Delete Topic?" description="Deleting this topic permanently removes its content sections and uploaded image." itemName={topic.topicName} confirmText="Delete Topic" loading={deleting} onCancel={closeDeleteModal} onConfirm={deleteTopic} />
         </div>
     );
 };
 
-const HierarchyItem = ({
-    label,
-    value,
-}) => {
+const HierarchyItem = ({ label, value }) => {
     return (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400">
@@ -1466,24 +934,20 @@ const HierarchyItem = ({
             </p>
 
             <p className="mt-1 truncate text-xs font-extrabold text-[#071a4a]">
-                {value}
+                {value || "Not available"}
             </p>
         </div>
     );
 };
 
-const SectionHeader = ({
-    title,
-    description,
-    icon: Icon,
-}) => {
+const SectionHeader = ({ title, description, icon: Icon }) => {
     return (
         <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <Icon size={18} />
             </div>
 
-            <div>
+            <div className="min-w-0">
                 <h2 className="text-base font-extrabold text-[#071a4a]">
                     {title}
                 </h2>
@@ -1496,108 +960,47 @@ const SectionHeader = ({
     );
 };
 
-const SelectField = ({
-    id,
-    name,
-    label,
-    value,
-    onChange,
-    disabled,
-    loading,
-    placeholder,
-    options,
-}) => {
+const SelectField = ({ id, name, label, value, onChange, disabled, loading, placeholder, options }) => {
     return (
         <div>
-            <label
-                htmlFor={id}
-                className="mb-2 block text-xs font-bold text-slate-700"
-            >
+            <label htmlFor={id} className="mb-2 block text-xs font-bold text-slate-700">
                 {label}
             </label>
 
             <div className="relative">
-                <select
-                    id={id}
-                    name={name || id}
-                    value={value}
-                    onChange={onChange}
-                    disabled={disabled}
-                    className="h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                >
-                    <option value="">
-                        {placeholder}
-                    </option>
+                <select id={id} name={name || id} value={value} onChange={onChange} disabled={disabled} className="h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">
+                    <option value="">{placeholder}</option>
 
                     {options.map((option) => (
-                        <option
-                            key={option.value}
-                            value={option.value}
-                        >
+                        <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
                     ))}
                 </select>
 
                 {loading ? (
-                    <LoaderCircle
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-blue-600"
-                    />
+                    <LoaderCircle size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-blue-600" />
                 ) : (
-                    <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
+                    <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 )}
             </div>
         </div>
     );
 };
 
-const InputField = ({
-    id,
-    name,
-    label,
-    type,
-    min,
-    value,
-    onChange,
-    disabled,
-    placeholder,
-}) => {
+const InputField = ({ id, name, label, type, min, value, onChange, disabled, placeholder }) => {
     return (
         <div>
-            <label
-                htmlFor={id}
-                className="mb-2 block text-xs font-bold text-slate-700"
-            >
+            <label htmlFor={id} className="mb-2 block text-xs font-bold text-slate-700">
                 {label}
             </label>
 
-            <input
-                id={id}
-                name={name}
-                type={type}
-                min={min}
-                value={value}
-                onChange={onChange}
-                disabled={disabled}
-                placeholder={placeholder}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-            />
+            <input id={id} name={name || id} type={type} min={min} value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100" />
         </div>
     );
 };
 
-const SectionEditor = ({
-    section,
-    index,
-    updateSection,
-    removeSection,
-    disabled,
-    canRemove,
-}) => {
+const SectionEditor = ({ section, index, updateSection, removeSection, disabled, canRemove }) => {
     return (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
@@ -1611,93 +1014,43 @@ const SectionEditor = ({
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        removeSection(index)
-                    }
-                    disabled={
-                        disabled || !canRemove
-                    }
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300"
-                >
+                <button type="button" onClick={() => removeSection(index)} disabled={disabled || !canRemove} aria-label={`Remove section ${index + 1}`} className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300">
                     <Trash2 size={15} />
                 </button>
             </div>
 
             <div className="space-y-4 p-4">
-                <InputField
-                    id={`subHeading-${index}`}
-                    label="Subheading"
-                    type="text"
-                    value={section.subHeading}
-                    onChange={(event) =>
-                        updateSection(
-                            index,
-                            "subHeading",
-                            event.target.value,
-                        )
-                    }
-                    disabled={disabled}
-                    placeholder="Enter subheading"
-                />
+                <InputField id={`subHeading-${index}`} label="Subheading" type="text" value={section.subHeading} onChange={(event) => updateSection(index, "subHeading", event.target.value)} disabled={disabled} placeholder="Enter subheading" />
 
                 <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                        <label
-                            htmlFor={`text-${index}`}
-                            className="text-xs font-bold text-slate-700"
-                        >
+                        <label htmlFor={`text-${index}`} className="text-xs font-bold text-slate-700">
                             Explanation
                         </label>
 
                         <span className="text-[9px] font-semibold text-slate-400">
-                            {section.text.length}{" "}
-                            characters
+                            {section.text.length} characters
                         </span>
                     </div>
 
-                    <textarea
-                        id={`text-${index}`}
-                        value={section.text}
-                        onChange={(event) =>
-                            updateSection(
-                                index,
-                                "text",
-                                event.target.value,
-                            )
-                        }
-                        disabled={disabled}
-                        rows={6}
-                        placeholder="Write section explanation..."
-                        className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
-                    />
+                    <textarea id={`text-${index}`} value={section.text} onChange={(event) => updateSection(index, "text", event.target.value)} disabled={disabled} rows={6} placeholder="Write section explanation..." className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100" />
                 </div>
             </div>
         </div>
     );
 };
 
-const DetailCard = ({
-    label,
-    value,
-    icon: Icon,
-}) => {
+const DetailCard = ({ label, value, icon: Icon }) => {
     return (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            {Icon && (
-                <Icon
-                    size={16}
-                    className="mb-2 text-blue-600"
-                />
-            )}
+            {Icon && <Icon size={16} className="mb-2 text-blue-600" />}
 
             <p className="text-[8px] font-bold uppercase tracking-[0.11em] text-slate-400">
                 {label}
             </p>
 
-            <p className="mt-1 text-xs font-extrabold text-[#071a4a] sm:text-sm">
-                {value}
+            <p className="mt-1 break-words text-xs font-extrabold text-[#071a4a] sm:text-sm">
+                {value || "Not available"}
             </p>
         </div>
     );
@@ -1708,7 +1061,6 @@ const TopicLoading = () => {
         <main className="mx-auto w-full max-w-[1200px] px-4 py-7 sm:px-6 lg:px-8">
             <div className="animate-pulse">
                 <div className="h-5 w-44 rounded bg-slate-200" />
-
                 <div className="mt-5 h-28 rounded-2xl bg-white" />
 
                 <div className="mt-5 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -1716,7 +1068,6 @@ const TopicLoading = () => {
 
                     <div className="space-y-5">
                         <div className="h-64 rounded-2xl bg-white" />
-
                         <div className="h-80 rounded-2xl bg-white" />
                     </div>
                 </div>
@@ -1725,10 +1076,7 @@ const TopicLoading = () => {
     );
 };
 
-const TopicError = ({
-    message,
-    onRetry,
-}) => {
+const TopicError = ({ message, onRetry }) => {
     return (
         <main className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1000px] items-center justify-center px-4 py-10">
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm">
@@ -1744,12 +1092,8 @@ const TopicError = ({
                     {message}
                 </p>
 
-                <button
-                    type="button"
-                    onClick={onRetry}
-                    className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
-                >
-                    Try again
+                <button type="button" onClick={onRetry} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700">
+                    Try Again
                 </button>
             </div>
         </main>
@@ -1757,48 +1101,31 @@ const TopicError = ({
 };
 
 const AdminHeader = ({ user }) => {
-    const [showUserMenu, setShowUserMenu] =
-        useState(false);
-
+    const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef(null);
 
     const accountName = user
-        ? `${user.firstname || ""} ${user.lastname || ""
-            }`.trim() || "Administrator"
+        ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || "Administrator"
         : "Administrator";
 
     useEffect(() => {
         const closeMenu = (event) => {
-            if (
-                menuRef.current &&
-                !menuRef.current.contains(
-                    event.target,
-                )
-            ) {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setShowUserMenu(false);
             }
         };
 
-        document.addEventListener(
-            "mousedown",
-            closeMenu,
-        );
+        document.addEventListener("mousedown", closeMenu);
 
         return () => {
-            document.removeEventListener(
-                "mousedown",
-                closeMenu,
-            );
+            document.removeEventListener("mousedown", closeMenu);
         };
     }, []);
 
     return (
         <header className="sticky top-0 z-50 bg-[#102a63] px-3 py-2 text-white shadow-sm sm:px-6">
             <div className="mx-auto flex h-14 w-full max-w-[1500px] items-center gap-2 sm:h-16 sm:gap-4">
-                <Link
-                    href="/admin"
-                    className="flex min-w-0 max-w-[48%] items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:max-w-none sm:gap-3 sm:px-4"
-                >
+                <Link href="/admin" className="flex min-w-0 max-w-[48%] items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:max-w-none sm:gap-3 sm:px-4">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#102a63] sm:h-10 sm:w-10">
                         <GraduationCap size={21} />
                     </div>
@@ -1814,38 +1141,13 @@ const AdminHeader = ({ user }) => {
                     </div>
                 </Link>
 
-                <div
-                    ref={menuRef}
-                    className="relative ml-auto min-w-0 max-w-[52%] sm:max-w-none"
-                >
-                    <button
-                        type="button"
-                        aria-label="Open admin account menu"
-                        aria-haspopup="menu"
-                        aria-expanded={showUserMenu}
-                        onClick={() =>
-                            setShowUserMenu(
-                                (previous) =>
-                                    !previous,
-                            )
-                        }
-                        className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4"
-                    >
+                <div ref={menuRef} className="relative ml-auto min-w-0 max-w-[52%] sm:max-w-none">
+                    <button type="button" aria-label="Open admin account menu" aria-haspopup="menu" aria-expanded={showUserMenu} onClick={() => setShowUserMenu((previous) => !previous)} className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-2.5 py-2 text-left text-white shadow-sm backdrop-blur-xl transition hover:bg-white/15 sm:gap-3 sm:px-4">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xs font-bold uppercase text-[#102a63] sm:h-10 sm:w-10 sm:text-sm">
                             {user?.profileimage?.url ? (
-                                <img
-                                    src={
-                                        user
-                                            .profileimage
-                                            .url
-                                    }
-                                    alt={accountName}
-                                    className="h-full w-full object-cover"
-                                />
+                                <img src={user.profileimage.url} alt={accountName} className="h-full w-full object-cover" />
                             ) : (
-                                user?.firstname?.charAt(
-                                    0,
-                                ) || "A"
+                                user?.firstname?.charAt(0) || "A"
                             )}
                         </div>
 
@@ -1855,55 +1157,23 @@ const AdminHeader = ({ user }) => {
                             </span>
 
                             <span className="block truncate text-[9px] text-blue-200 sm:max-w-52 sm:text-xs">
-                                {user?.email ||
-                                    "Administrator"}
+                                {user?.email || "Administrator"}
                             </span>
                         </div>
 
-                        <ChevronDown
-                            size={15}
-                            className={`shrink-0 text-blue-200 transition-transform ${showUserMenu
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                        />
+                        <ChevronDown size={15} className={`shrink-0 text-blue-200 transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
                     </button>
 
                     {showUserMenu && (
-                        <div
-                            role="menu"
-                            className="absolute right-0 top-full z-50 w-52 pt-2 sm:w-56"
-                        >
+                        <div role="menu" className="absolute right-0 top-full z-50 w-52 pt-2 sm:w-56">
                             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
-                                <Link
-                                    href="/"
-                                    role="menuitem"
-                                    onClick={() =>
-                                        setShowUserMenu(
-                                            false,
-                                        )
-                                    }
-                                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition hover:bg-blue-50 hover:text-blue-700"
-                                >
-                                    <ExternalLink
-                                        size={17}
-                                    />
+                                <Link href="/" role="menuitem" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition hover:bg-blue-50 hover:text-blue-700">
+                                    <ExternalLink size={17} />
                                     View Website
                                 </Link>
 
-                                <Link
-                                    href="/admin/settings"
-                                    role="menuitem"
-                                    onClick={() =>
-                                        setShowUserMenu(
-                                            false,
-                                        )
-                                    }
-                                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition hover:bg-blue-50 hover:text-blue-700"
-                                >
-                                    <Settings2
-                                        size={17}
-                                    />
+                                <Link href="/admin/settings" role="menuitem" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition hover:bg-blue-50 hover:text-blue-700">
+                                    <Settings2 size={17} />
                                     Settings
                                 </Link>
                             </div>
@@ -1915,4 +1185,4 @@ const AdminHeader = ({ user }) => {
     );
 };
 
-export default Topic;
+export default TopicPage;
