@@ -6,16 +6,20 @@ import axios from "axios";
 import Link from "next/link";
 import {
     ArrowLeft,
+    BookOpenCheck,
     CalendarDays,
     ChevronDown,
     CircleAlert,
+    ClipboardCheck,
     ExternalLink,
     GraduationCap,
+    ListChecks,
     LoaderCircle,
-    Pencil,
+    Plus,
     Save,
     Settings2,
     Trash2,
+    X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -28,26 +32,49 @@ const toastOptions = {
     closeOnClick: true,
 };
 
-const ManageEvent = () => {
+const mcqTypes = [
+    {
+        value: "both",
+        label: "Read and Test",
+        description: "This MCQ will appear in both study and test modes.",
+        icon: ListChecks,
+    },
+    {
+        value: "read",
+        label: "Read Only",
+        description: "This MCQ will only appear in study mode.",
+        icon: BookOpenCheck,
+    },
+    {
+        value: "test",
+        label: "Test Only",
+        description: "This MCQ will only appear in test mode.",
+        icon: ClipboardCheck,
+    },
+];
+
+const ManageMcqPage = () => {
     const params = useParams();
     const router = useRouter();
     const { user } = useUser();
 
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-    const [event, setEvent] = useState(null);
-    const [name, setName] = useState("");
-    const [savedName, setSavedName] = useState("");
+    const [mcq, setMcq] = useState(null);
+    const [statement, setStatement] = useState("");
+    const [options, setOptions] = useState([]);
+    const [explanation, setExplanation] = useState("");
+    const [mcqType, setMcqType] = useState("both");
     const [loading, setLoading] = useState(true);
-    const [isUpdating, setIsUpdating] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    const isBusy = isUpdating || isDeleting;
-
-    const getEvent = useCallback(async () => {
+    const getMcq = useCallback(async () => {
         if (!id) {
+            setLoading(false);
+            setErrorMessage("MCQ ID is missing");
             return;
         }
 
@@ -55,344 +82,489 @@ const ManageEvent = () => {
             setLoading(true);
             setErrorMessage("");
 
-            const result = await axios.get(`/api/events/${id}`, {
-                withCredentials: true,
-            });
+            const result = await axios.get(`/api/mcqs/${id}`);
+            const selectedMcq = result.data?.mcq;
 
-            if (!result.data?.success || !result.data?.event) {
-                setEvent(null);
-                setErrorMessage(result.data?.message || "Event could not be loaded");
+            if (!result.data?.success || !selectedMcq) {
+                setMcq(null);
+                setErrorMessage(result.data?.message || "MCQ could not be loaded");
                 return;
             }
 
-            const currentEvent = result.data.event;
+            const selectedType = ["read", "test", "both"].includes(selectedMcq.type)
+                ? selectedMcq.type
+                : "both";
 
-            setEvent(currentEvent);
-            setName(currentEvent.name || "");
-            setSavedName(currentEvent.name || "");
+            setMcq(selectedMcq);
+            setStatement(selectedMcq.statement || "");
+            setExplanation(selectedMcq.explanation || "");
+            setMcqType(selectedType);
+            setOptions(
+                (selectedMcq.options || []).map((option) => ({
+                    text: option.text || "",
+                    isCorrect: Boolean(option.isCorrect),
+                })),
+            );
         } catch (error) {
             console.log(error);
 
-            setEvent(null);
-            setErrorMessage(error.response?.data?.message || error.message || "Event could not be loaded");
+            setMcq(null);
+            setErrorMessage(error.response?.data?.message || "MCQ could not be loaded");
         } finally {
             setLoading(false);
         }
     }, [id]);
 
-    const updateEvent = async (submitEvent) => {
-        submitEvent.preventDefault();
+    const updateOption = (index, value) => {
+        setOptions((previous) =>
+            previous.map((option, optionIndex) =>
+                optionIndex === index
+                    ? {
+                        ...option,
+                        text: value,
+                    }
+                    : option,
+            ),
+        );
+    };
 
-        if (loading || isBusy) {
+    const selectCorrectOption = (index) => {
+        setOptions((previous) =>
+            previous.map((option, optionIndex) => ({
+                ...option,
+                isCorrect: optionIndex === index,
+            })),
+        );
+    };
+
+    const addOption = () => {
+        if (options.length >= 6) {
+            toast.error("A maximum of six options is allowed", toastOptions);
             return;
         }
 
-        const eventName = name.trim();
+        setOptions((previous) => [
+            ...previous,
+            {
+                text: "",
+                isCorrect: false,
+            },
+        ]);
+    };
 
-        if (!eventName) {
-            toast.dismiss();
-            toast.error("Event name is required", toastOptions);
+    const removeOption = (index) => {
+        if (options.length <= 2) {
+            toast.error("At least two options are required", toastOptions);
+            return;
+        }
+
+        setOptions((previous) => {
+            const removedOptionWasCorrect = previous[index]?.isCorrect;
+            const nextOptions = previous.filter((option, optionIndex) => optionIndex !== index);
+
+            if (removedOptionWasCorrect && nextOptions.length > 0) {
+                nextOptions[0] = {
+                    ...nextOptions[0],
+                    isCorrect: true,
+                };
+            }
+
+            return nextOptions;
+        });
+    };
+
+    const validateMcq = () => {
+        if (!statement.trim()) {
+            toast.error("MCQ statement is required", toastOptions);
+            return false;
+        }
+
+        if (options.length < 2) {
+            toast.error("At least two options are required", toastOptions);
+            return false;
+        }
+
+        if (options.some((option) => !option.text.trim())) {
+            toast.error("Please enter text for every option", toastOptions);
+            return false;
+        }
+
+        const correctOptions = options.filter((option) => option.isCorrect);
+
+        if (correctOptions.length !== 1) {
+            toast.error("Please select exactly one correct option", toastOptions);
+            return false;
+        }
+
+        if (!["read", "test", "both"].includes(mcqType)) {
+            toast.error("Please select a valid MCQ type", toastOptions);
+            return false;
+        }
+
+        return true;
+    };
+
+    const updateMcq = async (submitEvent) => {
+        submitEvent.preventDefault();
+
+        if (!mcq || updating || deleting || !validateMcq()) {
             return;
         }
 
         try {
-            setIsUpdating(true);
+            setUpdating(true);
 
-            const result = await axios.put(
-                `/api/events/${id}`,
-                {
-                    name: eventName,
-                },
-                {
-                    withCredentials: true,
-                },
-            );
+            const topicId = typeof mcq.topic === "object"
+                ? mcq.topic?._id
+                : mcq.topic;
 
-            if (!result.data?.success) {
-                toast.dismiss();
-                toast.error(result.data?.message || "Event could not be updated", toastOptions);
+            if (!topicId) {
+                toast.error("The MCQ topic is not available", toastOptions);
                 return;
             }
 
-            setName(eventName);
-            setSavedName(eventName);
+            const result = await axios.put(`/api/mcqs/${id}`, {
+                topic: topicId,
+                statement: statement.trim(),
+                options: options.map((option) => ({
+                    text: option.text.trim(),
+                    isCorrect: option.isCorrect,
+                })),
+                explanation: explanation.trim(),
+                type: mcqType,
+            });
 
-            setEvent((previous) => ({
+            if (!result.data?.success) {
+                toast.error(result.data?.message || "MCQ could not be updated", toastOptions);
+                return;
+            }
+
+            setMcq((previous) => ({
                 ...previous,
-                ...result.data.event,
-                name: eventName,
+                ...result.data.mcq,
             }));
 
-            toast.dismiss();
-            toast.success(result.data.message || "Event is updated", toastOptions);
-
-            router.replace("/admin/events");
+            toast.success(result.data?.message || "MCQ is updated", toastOptions);
         } catch (error) {
             console.log(error);
 
-            toast.dismiss();
-            toast.error(error.response?.data?.message || error.message || "Event could not be updated", toastOptions);
+            toast.error(error.response?.data?.message || "MCQ could not be updated", toastOptions);
         } finally {
-            setIsUpdating(false);
+            setUpdating(false);
         }
     };
 
     const openDeleteModal = () => {
-        if (!loading && !isBusy) {
+        if (!updating && !deleting) {
             setShowDeleteModal(true);
         }
     };
 
     const closeDeleteModal = useCallback(() => {
-        if (!isDeleting) {
+        if (!deleting) {
             setShowDeleteModal(false);
         }
-    }, [isDeleting]);
+    }, [deleting]);
 
-    const deleteEvent = async () => {
-        if (!id || loading || isDeleting || isUpdating) {
+    const deleteMcq = async () => {
+        if (!id || updating || deleting) {
             return;
         }
 
         try {
-            setIsDeleting(true);
+            setDeleting(true);
 
-            const result = await axios.delete(`/api/events/${id}`, {
-                withCredentials: true,
-            });
+            const result = await axios.delete(`/api/mcqs/${id}`);
 
             if (!result.data?.success) {
-                toast.dismiss();
-                toast.error(result.data?.message || "Event could not be deleted", toastOptions);
+                toast.error(result.data?.message || "MCQ could not be deleted", toastOptions);
                 return;
             }
 
             setShowDeleteModal(false);
 
-            toast.dismiss();
-            toast.success(result.data.message || "Event is deleted", toastOptions);
+            toast.success(result.data?.message || "MCQ is deleted", toastOptions);
 
-            router.replace("/admin/events");
+            router.replace("/admin/mcqs");
+            router.refresh();
         } catch (error) {
             console.log(error);
 
-            toast.dismiss();
-            toast.error(error.response?.data?.message || error.message || "Event could not be deleted", toastOptions);
+            toast.error(error.response?.data?.message || "MCQ could not be deleted", toastOptions);
         } finally {
-            setIsDeleting(false);
+            setDeleting(false);
         }
-    };
-
-    const formatDate = (date) => {
-        if (!date) {
-            return "Not available";
-        }
-
-        const parsedDate = new Date(date);
-
-        if (Number.isNaN(parsedDate.getTime())) {
-            return "Not available";
-        }
-
-        return new Intl.DateTimeFormat("en-PK", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-        }).format(parsedDate);
     };
 
     useEffect(() => {
-        getEvent();
-    }, [getEvent]);
+        getMcq();
+    }, [getMcq]);
 
     if (loading) {
         return (
             <div className="min-h-screen bg-[#f5f7fb]">
                 <AdminHeader user={user} />
-
-                <main className="mx-auto w-full max-w-[900px] px-4 py-7 sm:px-6 lg:px-8">
-                    <div className="animate-pulse">
-                        <div className="h-5 w-40 rounded bg-slate-200" />
-                        <div className="mt-5 h-28 rounded-2xl bg-white" />
-                        <div className="mt-5 h-96 rounded-2xl bg-white" />
-                    </div>
-                </main>
+                <McqLoading />
             </div>
         );
     }
 
-    if (errorMessage || !event) {
+    if (errorMessage || !mcq) {
         return (
             <div className="min-h-screen bg-[#f5f7fb]">
                 <AdminHeader user={user} />
-                <EventError message={errorMessage || "Event is not available"} onRetry={getEvent} />
+                <McqError message={errorMessage || "MCQ is not available"} retry={getMcq} />
             </div>
         );
     }
+
+    const topicName = mcq.topic?.topicName || mcq.topic?.name || "Selected Topic";
 
     return (
         <div className="min-h-screen bg-[#f5f7fb]">
             <AdminHeader user={user} />
 
-            <main className="mx-auto w-full max-w-[900px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+            <main className="mx-auto w-full max-w-[1100px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8">
                 <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-2 text-xs sm:text-sm">
-                    <Link href="/admin/events" className="flex items-center gap-1.5 font-semibold text-slate-500 transition hover:text-blue-700">
+                    <Link href="/admin/mcqs" className="flex items-center gap-1.5 font-semibold text-slate-500 transition hover:text-blue-700">
                         <ArrowLeft size={16} />
-                        Events
+                        MCQs
                     </Link>
 
                     <span className="text-slate-300">/</span>
 
-                    <span className="max-w-52 truncate font-semibold text-blue-700">
-                        {savedName || "Manage Event"}
+                    <span className="max-w-60 truncate font-semibold text-blue-700">
+                        Manage MCQ
                     </span>
                 </nav>
 
                 <section className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                     <div className="min-w-0">
                         <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-600">
-                            Event management
+                            MCQ management
                         </p>
 
-                        <h1 className="mt-1.5 truncate text-xl font-extrabold tracking-tight text-[#071a4a] sm:text-2xl">
-                            Manage {savedName}
+                        <h1 className="mt-1.5 text-xl font-extrabold tracking-tight text-[#071a4a] sm:text-2xl">
+                            Update MCQ
                         </h1>
 
                         <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
-                            Update the event name or permanently remove the event.
+                            Update the statement, options, correct answer, explanation and availability.
                         </p>
                     </div>
 
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <GraduationCap size={23} />
+                        <ListChecks size={23} />
                     </div>
                 </section>
 
-                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="grid md:grid-cols-[0.75fr_1.25fr]">
-                        <aside className="flex flex-col justify-between bg-[#102a63] px-6 py-7 sm:px-8 md:px-9 md:py-10">
-                            <div>
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-[#102a63] shadow-sm">
-                                    <GraduationCap size={25} />
-                                </div>
-
-                                <p className="mt-8 text-[9px] font-extrabold uppercase tracking-[0.16em] text-blue-200">
-                                    Selected event
+                <div className="grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+                    <aside className="space-y-5 lg:sticky lg:top-24">
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="bg-[#102a63] p-5 text-white">
+                                <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-200">
+                                    Assigned topic
                                 </p>
 
-                                <h2 className="mt-2 break-words text-xl font-extrabold leading-7 text-white">
-                                    {savedName}
+                                <h2 className="mt-2 break-words text-base font-extrabold">
+                                    {topicName}
                                 </h2>
 
-                                <p className="mt-3 text-xs leading-5 text-blue-100">
-                                    Changes to this event will also appear in the website navigation and public event pages.
+                                <p className="mt-2 text-[10px] leading-5 text-blue-100">
+                                    This MCQ remains connected to its currently assigned topic.
                                 </p>
                             </div>
 
-                            <div className="mt-8 space-y-3">
-                                <EventDate label="Created" value={formatDate(event.createdAt)} />
-                                <EventDate label="Last updated" value={formatDate(event.updatedAt)} />
+                            <div className="space-y-3 p-4">
+                                <InformationItem label="Created" value={formatDate(mcq.createdAt)} />
+                                <InformationItem label="Last updated" value={formatDate(mcq.updatedAt)} />
+                                <InformationItem label="Options" value={`${options.length} options`} />
+                                <InformationItem label="Availability" value={getTypeLabel(mcqType)} />
                             </div>
-                        </aside>
+                        </section>
 
-                        <div className="p-5 sm:p-7 md:p-9">
-                            <div className="flex items-start gap-3 border-b border-slate-200 pb-5">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                    <Pencil size={19} />
-                                </div>
+                        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-400">
+                                MCQ ID
+                            </p>
 
-                                <div>
-                                    <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-600">
-                                        Event information
-                                    </p>
+                            <p className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-[9px] leading-4 text-slate-600">
+                                {mcq._id}
+                            </p>
+                        </section>
+                    </aside>
 
-                                    <h2 className="mt-1 text-lg font-extrabold text-[#071a4a]">
-                                        Update Event
-                                    </h2>
+                    <form onSubmit={updateMcq} className="space-y-5">
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <SectionHeader title="Question Statement" description="Enter the complete MCQ question." />
 
-                                    <p className="mt-1 text-[10px] leading-5 text-slate-500 sm:text-xs">
-                                        Enter a short and recognizable educational event name.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <form onSubmit={updateEvent} className="mt-6">
-                                <label htmlFor="name" className="mb-2 block text-xs font-bold text-slate-700">
-                                    Event name
+                            <div className="p-5 sm:p-6">
+                                <label htmlFor="statement" className="mb-2 block text-xs font-bold text-slate-700">
+                                    Statement
                                 </label>
 
-                                <input id="name" type="text" name="name" value={name} onChange={(inputEvent) => setName(inputEvent.target.value)} placeholder="Enter event name" autoComplete="off" required disabled={isBusy} className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50" />
-
-                                <p className="mt-2 text-[10px] leading-4 text-slate-500">
-                                    Updating the event name will not change its ID or connected references.
-                                </p>
-
-                                <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                                    <Link href="/admin/events" className="flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
-                                        Cancel
-                                    </Link>
-
-                                    <button type="submit" disabled={isBusy} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
-                                        {isUpdating ? (
-                                            <>
-                                                <LoaderCircle size={16} className="animate-spin" />
-                                                Updating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save size={16} />
-                                                Save Changes
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div className="mt-8 border-t border-red-100 pt-5">
-                                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                                    <p className="text-xs font-extrabold text-red-700">
-                                        Delete Event
-                                    </p>
-
-                                    <p className="mt-1 text-[10px] leading-5 text-red-600 sm:text-xs">
-                                        The event can only be deleted after all connected subjects and their learning content have been removed.
-                                    </p>
-
-                                    <button type="button" onClick={openDeleteModal} disabled={isBusy} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400 sm:w-auto">
-                                        <Trash2 size={15} />
-                                        Delete Event
-                                    </button>
-                                </div>
+                                <textarea id="statement" value={statement} onChange={(event) => setStatement(event.target.value)} disabled={updating || deleting} rows={5} placeholder="Enter the MCQ statement" className="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-[#071a4a] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50" />
                             </div>
-                        </div>
-                    </div>
-                </section>
+                        </section>
+
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+                                <div>
+                                    <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-blue-600">
+                                        Answer choices
+                                    </p>
+
+                                    <h2 className="mt-1 text-base font-extrabold text-[#071a4a]">
+                                        Options
+                                    </h2>
+                                </div>
+
+                                <button type="button" onClick={addOption} disabled={updating || deleting || options.length >= 6} className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-[9px] font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
+                                    <Plus size={14} />
+                                    Add Option
+                                </button>
+                            </div>
+
+                            <div className="space-y-3 p-5 sm:p-6">
+                                {options.map((option, index) => (
+                                    <div key={index} className={`rounded-xl border p-3 transition ${option.isCorrect ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
+                                        <div className="flex items-start gap-3">
+                                            <button type="button" onClick={() => selectCorrectOption(index)} disabled={updating || deleting} aria-label={`Mark option ${index + 1} as correct`} className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-extrabold transition ${option.isCorrect ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-slate-500 hover:border-emerald-500 hover:text-emerald-600"}`}>
+                                                {String.fromCharCode(65 + index)}
+                                            </button>
+
+                                            <div className="min-w-0 flex-1">
+                                                <input type="text" value={option.text} onChange={(event) => updateOption(index, event.target.value)} disabled={updating || deleting} placeholder={`Enter option ${String.fromCharCode(65 + index)}`} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-[#071a4a] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100" />
+
+                                                <p className={`mt-1.5 text-[9px] font-bold ${option.isCorrect ? "text-emerald-600" : "text-slate-400"}`}>
+                                                    {option.isCorrect ? "Correct answer" : "Click the letter to mark as correct"}
+                                                </p>
+                                            </div>
+
+                                            <button type="button" onClick={() => removeOption(index)} disabled={updating || deleting || options.length <= 2} aria-label={`Remove option ${index + 1}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40">
+                                                <X size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <SectionHeader title="Explanation" description="Explain why the selected option is correct." />
+
+                            <div className="p-5 sm:p-6">
+                                <textarea value={explanation} onChange={(event) => setExplanation(event.target.value)} disabled={updating || deleting} rows={5} placeholder="Enter the answer explanation" className="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-[#071a4a] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50" />
+                            </div>
+                        </section>
+
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <SectionHeader title="MCQ Availability" description="Choose where this MCQ should appear." />
+
+                            <div className="grid gap-3 p-5 sm:grid-cols-3 sm:p-6">
+                                {mcqTypes.map((item) => {
+                                    const Icon = item.icon;
+                                    const selected = mcqType === item.value;
+
+                                    return (
+                                        <label key={item.value} className={`cursor-pointer rounded-xl border p-4 transition ${selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" : "border-slate-200 bg-white hover:border-blue-300"}`}>
+                                            <input type="radio" name="mcqType" value={item.value} checked={selected} onChange={(event) => setMcqType(event.target.value)} disabled={updating || deleting} className="sr-only" />
+
+                                            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                                <Icon size={17} />
+                                            </div>
+
+                                            <p className="mt-3 text-xs font-extrabold text-[#071a4a]">
+                                                {item.label}
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] leading-4 text-slate-500">
+                                                {item.description}
+                                            </p>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                        <section className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                            <button type="button" onClick={openDeleteModal} disabled={updating || deleting} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-xs font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400">
+                                <Trash2 size={16} />
+                                Delete MCQ
+                            </button>
+
+                            <button type="submit" disabled={updating || deleting} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400">
+                                {updating ? (
+                                    <>
+                                        <LoaderCircle size={16} className="animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={16} />
+                                        Update MCQ
+                                    </>
+                                )}
+                            </button>
+                        </section>
+                    </form>
+                </div>
             </main>
 
-            <DeleteConfirmationModal open={showDeleteModal} title="Delete Event?" description="This will permanently remove the event. Make sure all subjects and learning content connected to this event have already been deleted." itemName={savedName} confirmText="Delete Event" loading={isDeleting} onCancel={closeDeleteModal} onConfirm={deleteEvent} />
+            <DeleteConfirmationModal open={showDeleteModal} title="Delete MCQ?" description="This MCQ, its options and explanation will be permanently removed." itemName={statement || "Selected MCQ"} confirmText="Delete MCQ" loading={deleting} onCancel={closeDeleteModal} onConfirm={deleteMcq} />
         </div>
     );
 };
 
-const EventDate = ({ label, value }) => {
+const SectionHeader = ({ title, description }) => {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-3 py-3">
-            <CalendarDays size={16} className="shrink-0 text-blue-200" />
+        <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-blue-600">
+                MCQ information
+            </p>
 
-            <div className="min-w-0">
-                <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-blue-200">
-                    {label}
-                </p>
+            <h2 className="mt-1 text-base font-extrabold text-[#071a4a]">
+                {title}
+            </h2>
 
-                <p className="mt-0.5 truncate text-[10px] font-bold text-white">
-                    {value}
-                </p>
-            </div>
+            <p className="mt-1 text-[10px] leading-5 text-slate-500 sm:text-xs">
+                {description}
+            </p>
         </div>
     );
 };
 
-const EventError = ({ message, onRetry }) => {
+const InformationItem = ({ label, value }) => {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-[8px] font-extrabold uppercase tracking-[0.1em] text-slate-400">
+                {label}
+            </p>
+
+            <p className="mt-1 truncate text-[10px] font-bold text-[#071a4a]">
+                {value}
+            </p>
+        </div>
+    );
+};
+
+const McqLoading = () => {
+    return (
+        <main className="mx-auto w-full max-w-[1100px] px-3 py-7 sm:px-6 lg:px-8">
+            <div className="animate-pulse">
+                <div className="h-5 w-40 rounded bg-slate-200" />
+                <div className="mt-5 h-28 rounded-2xl bg-white" />
+
+                <div className="mt-5 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+                    <div className="h-96 rounded-2xl bg-white" />
+                    <div className="h-[620px] rounded-2xl bg-white" />
+                </div>
+            </div>
+        </main>
+    );
+};
+
+const McqError = ({ message, retry }) => {
     return (
         <main className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[900px] items-center justify-center px-4 py-10">
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm">
@@ -401,14 +573,14 @@ const EventError = ({ message, onRetry }) => {
                 </div>
 
                 <h1 className="mt-4 text-lg font-extrabold text-[#071a4a]">
-                    Event could not be opened
+                    MCQ could not be opened
                 </h1>
 
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                     {message}
                 </p>
 
-                <button type="button" onClick={onRetry} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700">
+                <button type="button" onClick={retry} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700">
                     Try Again
                 </button>
             </div>
@@ -468,11 +640,11 @@ const AdminHeader = ({ user }) => {
                         </div>
 
                         <div className="min-w-0">
-                            <span className="block truncate text-[11px] font-bold text-white sm:max-w-[220px] sm:text-sm">
+                            <span className="block truncate text-[11px] font-bold text-white sm:max-w-52 sm:text-sm">
                                 {accountName}
                             </span>
 
-                            <span className="block truncate text-[9px] text-blue-200 sm:max-w-[220px] sm:text-xs">
+                            <span className="block truncate text-[9px] text-blue-200 sm:max-w-52 sm:text-xs">
                                 {user?.email || "Administrator"}
                             </span>
                         </div>
@@ -501,4 +673,34 @@ const AdminHeader = ({ user }) => {
     );
 };
 
-export default ManageEvent;
+const getTypeLabel = (type) => {
+    if (type === "read") {
+        return "Read Only";
+    }
+
+    if (type === "test") {
+        return "Test Only";
+    }
+
+    return "Read and Test";
+};
+
+const formatDate = (date) => {
+    if (!date) {
+        return "Not available";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return "Not available";
+    }
+
+    return new Intl.DateTimeFormat("en-PK", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    }).format(parsedDate);
+};
+
+export default ManageMcqPage;
