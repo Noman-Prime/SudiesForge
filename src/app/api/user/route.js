@@ -16,3 +16,4 @@ export const GET = async (req) => {
         user: auth.user
     }, { status: 200 })
 }
+
