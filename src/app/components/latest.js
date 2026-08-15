@@ -1,188 +1,159 @@
 import Link from "next/link";
-import {
-    ArrowRight,
-    ClipboardCheck,
-    FileText,
-    ListChecks,
-    Play,
-    PlayCircle,
-} from "lucide-react";
+import { ArrowRight, FileClock, Files, FileText } from "lucide-react";
 
-const sampleResources = [
+const pastPaperEvents = [
     {
-        _id: "resource-notes-1",
-        resourceType: "notes",
-        typeLabel: "New Notes",
-        title: "Plant Kingdom - Complete Notes",
-        subtitle: "MDCAT Biology",
-        timeLabel: "2 days ago",
-        href: "/notes/plant-kingdom",
+        _id: "mdcat-past-papers",
+        eventName: "MDCAT",
+        description: "Browse all available previous MDCAT examination papers.",
+        href: "/past-papers/mdcat",
     },
     {
-        _id: "resource-lecture-1",
-        resourceType: "lecture",
-        typeLabel: "New Lecture",
-        title: "The Living World - Full Lecture",
-        subtitle: "MDCAT Biology",
-        timeLabel: "5 days ago",
-        href: "/lectures/the-living-world",
-        showPreview: true,
+        _id: "ppsc-past-papers",
+        eventName: "PPSC",
+        description: "Explore previous papers from available PPSC examinations.",
+        href: "/past-papers/ppsc",
     },
     {
-        _id: "resource-mcqs-1",
-        resourceType: "mcqs",
-        typeLabel: "New MCQs",
-        title: "Cell Biology - 50 MCQs",
-        subtitle: "MDCAT Biology",
-        timeLabel: "1 week ago",
-        href: "/mcqs/cell-biology",
+        _id: "css-past-papers",
+        eventName: "CSS",
+        description: "Access previous CSS competitive examination papers.",
+        href: "/past-papers/css",
     },
     {
-        _id: "resource-test-1",
-        resourceType: "mockTest",
-        typeLabel: "New Mock Test",
-        title: "MDCAT Biology Full Mock Test",
-        subtitle: "100 Questions",
-        timeLabel: "1 week ago",
-        href: "/mock-tests/mdcat-biology",
-    },
-    {
-        _id: "resource-notes-2",
-        resourceType: "notes",
-        typeLabel: "New Notes",
-        title: "Tenses in English - Complete Guide",
-        subtitle: "CSS English",
-        timeLabel: "1 week ago",
-        href: "/notes/english-tenses",
+        _id: "pms-past-papers",
+        eventName: "PMS",
+        description: "Browse previous PMS examination papers by year.",
+        href: "/past-papers/pms",
     },
 ];
 
-const resourceStyles = {
-    notes: {
-        icon: FileText,
-        iconStyle: "bg-emerald-50 text-emerald-600",
-        labelStyle: "text-emerald-600",
-        borderStyle: "group-hover:border-emerald-200",
+const cardStyles = [
+    {
+        card: "border-blue-300 shadow-md lg:border-slate-200 lg:shadow-sm lg:hover:border-blue-300 lg:hover:shadow-md",
+        preview: "from-blue-600 to-blue-800 lg:from-blue-50 lg:to-blue-100 lg:group-hover:from-blue-600 lg:group-hover:to-blue-800",
+        title: "text-white lg:text-blue-800 lg:group-hover:text-white",
+        label: "text-blue-100 lg:text-blue-600 lg:group-hover:text-blue-100",
+        icon: "text-blue-600",
     },
-    lecture: {
-        icon: PlayCircle,
-        iconStyle: "bg-rose-50 text-rose-600",
-        labelStyle: "text-rose-600",
-        borderStyle: "group-hover:border-rose-200",
+    {
+        card: "border-emerald-300 shadow-md lg:border-slate-200 lg:shadow-sm lg:hover:border-emerald-300 lg:hover:shadow-md",
+        preview: "from-emerald-600 to-emerald-800 lg:from-emerald-50 lg:to-emerald-100 lg:group-hover:from-emerald-600 lg:group-hover:to-emerald-800",
+        title: "text-white lg:text-emerald-800 lg:group-hover:text-white",
+        label: "text-emerald-100 lg:text-emerald-600 lg:group-hover:text-emerald-100",
+        icon: "text-emerald-600",
     },
-    mcqs: {
-        icon: ListChecks,
-        iconStyle: "bg-violet-50 text-violet-600",
-        labelStyle: "text-violet-600",
-        borderStyle: "group-hover:border-violet-200",
+    {
+        card: "border-orange-300 shadow-md lg:border-slate-200 lg:shadow-sm lg:hover:border-orange-300 lg:hover:shadow-md",
+        preview: "from-orange-500 to-orange-700 lg:from-orange-50 lg:to-orange-100 lg:group-hover:from-orange-500 lg:group-hover:to-orange-700",
+        title: "text-white lg:text-orange-800 lg:group-hover:text-white",
+        label: "text-orange-100 lg:text-orange-600 lg:group-hover:text-orange-100",
+        icon: "text-orange-500",
     },
-    mockTest: {
-        icon: ClipboardCheck,
-        iconStyle: "bg-blue-50 text-blue-600",
-        labelStyle: "text-blue-600",
-        borderStyle: "group-hover:border-blue-200",
+    {
+        card: "border-violet-300 shadow-md lg:border-slate-200 lg:shadow-sm lg:hover:border-violet-300 lg:hover:shadow-md",
+        preview: "from-violet-600 to-violet-800 lg:from-violet-50 lg:to-violet-100 lg:group-hover:from-violet-600 lg:group-hover:to-violet-800",
+        title: "text-white lg:text-violet-800 lg:group-hover:text-white",
+        label: "text-violet-100 lg:text-violet-600 lg:group-hover:text-violet-100",
+        icon: "text-violet-600",
     },
-};
+];
 
-const LatestResources = ({
-    resources = sampleResources,
-}) => {
-    const visibleResources = resources.slice(0, 5);
-
+const PastPapers = () => {
     return (
-        <section className="bg-white px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-11">
-            <div className="mx-auto w-full max-w-[1300px]">
-                <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
-                    <h2 className="text-lg font-extrabold tracking-tight text-[#071a4a] sm:text-2xl">
-                        Latest Resources
-                    </h2>
+        <section id="past-papers" aria-labelledby="past-papers-heading" className="relative overflow-hidden border-b border-slate-200 bg-slate-50/70 px-3 py-7 sm:px-6 sm:py-9 lg:px-8">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-blue-50/80 to-transparent" />
 
-                    <Link
-                        href="/resources"
-                        className="hidden h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md sm:inline-flex"
-                    >
-                        View all resources
+            <div className="relative mx-auto w-full max-w-[1200px]">
+                <div className="flex items-end justify-between gap-4">
+                    <div>
+                        <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-blue-600">
+                            Previous examinations
+                        </p>
+
+                        <h2 id="past-papers-heading" className="mt-1 text-lg font-extrabold tracking-tight text-[#071a4a] sm:text-xl">
+                            Past Papers
+                        </h2>
+
+                        <p className="mt-1 max-w-2xl text-[10px] leading-5 text-slate-500 sm:text-xs">
+                            Select an event to browse all previous examination papers available under it.
+                        </p>
+                    </div>
+
+                    <Link href="/past-papers" className="hidden h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md sm:flex">
+                        View All Papers
                         <ArrowRight size={15} />
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-                    {visibleResources.map((resource, index) => {
-                        const style =
-                            resourceStyles[resource.resourceType] ||
-                            resourceStyles.notes;
-
-                        const Icon = style.icon;
+                <div className="mt-5 grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                    {pastPaperEvents.map((item, index) => {
+                        const style = cardStyles[index % cardStyles.length];
 
                         return (
-                            <Link
-                                key={resource._id}
-                                href={resource.href}
-                                className={`group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-lg ${index >= 4 ? "max-sm:hidden" : ""} ${style.borderStyle}`}
-                            >
-                                {resource.thumbnail ? (
-                                    <div className="aspect-[16/9] overflow-hidden bg-slate-100">
-                                        <img
-                                            src={resource.thumbnail}
-                                            alt={resource.title}
-                                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                                        />
-                                    </div>
-                                ) : resource.showPreview ? (
-                                    <div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden bg-gradient-to-br from-[#102a63] via-blue-700 to-blue-500">
-                                        <div className="absolute -left-5 top-2 h-16 w-16 rounded-full bg-white/10" />
+                            <article key={item._id} className={`group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-white transition duration-200 lg:hover:-translate-y-0.5 ${style.card}`}>
+                                <div className={`relative h-28 overflow-hidden bg-gradient-to-br p-3 transition duration-300 sm:h-32 sm:p-4 ${style.preview}`}>
+                                    <div className="absolute -left-6 -top-7 h-20 w-20 rounded-full bg-white/10" />
+                                    <div className="absolute -bottom-9 -right-5 h-24 w-24 rounded-full bg-white/10" />
 
-                                        <div className="absolute -bottom-7 right-1 h-20 w-20 rounded-full bg-white/10" />
+                                    <div className="relative flex h-full items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className={`flex items-center gap-1 text-[7px] font-extrabold uppercase tracking-[0.12em] transition sm:text-[8px] ${style.label}`}>
+                                                <FileClock size={11} />
+                                                Past Papers
+                                            </div>
 
-                                        <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-blue-700 shadow-lg transition group-hover:scale-110 sm:h-11 sm:w-11">
-                                            <Play
-                                                size={18}
-                                                fill="currentColor"
-                                            />
+                                            <h3 className={`mt-1.5 truncate text-sm font-black tracking-tight transition sm:text-base ${style.title}`}>
+                                                {item.eventName}
+                                            </h3>
+
+                                            <p className={`mt-1 text-[7px] font-semibold transition sm:text-[8px] ${style.label}`}>
+                                                Examination archive
+                                            </p>
+                                        </div>
+
+                                        <div className="relative mr-1 flex h-[70px] w-[52px] shrink-0 rotate-2 flex-col rounded-md border border-white/70 bg-white p-2 shadow-lg transition duration-300 lg:group-hover:rotate-6 sm:h-[78px] sm:w-[58px]">
+                                            <FileText size={18} className={`mx-auto ${style.icon}`} />
+
+                                            <div className="mt-2 h-1 w-full rounded-full bg-slate-200" />
+                                            <div className="mt-1 h-1 w-4/5 rounded-full bg-slate-200" />
+                                            <div className="mt-1 h-1 w-3/5 rounded-full bg-slate-200" />
+
+                                            <span className={`mt-auto text-center text-[6px] font-black uppercase ${style.icon}`}>
+                                                {item.eventName}
+                                            </span>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-                                        <div
-                                            className={`flex h-10 w-10 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${style.iconStyle}`}
-                                        >
-                                            <Icon
-                                                size={21}
-                                                strokeWidth={1.9}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
 
                                 <div className="flex flex-1 flex-col p-3 sm:p-4">
-                                    <span
-                                        className={`text-[8px] font-extrabold uppercase tracking-[0.12em] sm:text-[9px] ${style.labelStyle}`}
-                                    >
-                                        {resource.typeLabel}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        <Files size={13} className="shrink-0 text-blue-600" />
 
-                                    <h3 className="mt-2 line-clamp-2 text-xs font-extrabold leading-4 text-[#071a4a] sm:text-sm sm:leading-5">
-                                        {resource.title}
-                                    </h3>
+                                        <span className="text-[8px] font-extrabold uppercase tracking-[0.1em] text-blue-600 sm:text-[9px]">
+                                            Event Collection
+                                        </span>
+                                    </div>
 
-                                    <p className="mt-1 line-clamp-1 text-[9px] font-medium text-slate-500 sm:text-[11px]">
-                                        {resource.subtitle}
+                                    <p className="mt-2 line-clamp-3 text-[9px] leading-4 text-slate-500 sm:text-[10px]">
+                                        {item.description}
                                     </p>
 
-                                    <span className="mt-auto pt-4 text-[8px] font-medium text-slate-400 sm:text-[10px]">
-                                        {resource.timeLabel}
-                                    </span>
+                                    <div className="mt-auto border-t border-slate-100 pt-3">
+                                        <Link href={item.href} aria-label={`Browse ${item.eventName} past papers`} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-2 text-[8px] font-bold text-white shadow-md transition active:scale-[0.98] lg:shadow-sm lg:hover:bg-blue-700 lg:hover:shadow-md sm:h-10 sm:text-[9px]">
+                                            <span className="truncate">Browse Papers</span>
+                                            <ArrowRight size={13} className="shrink-0" />
+                                        </Link>
+                                    </div>
                                 </div>
-                            </Link>
+                            </article>
                         );
                     })}
                 </div>
 
-                <Link
-                    href="/resources"
-                    className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 sm:hidden"
-                >
-                    View all resources
+                <Link href="/past-papers" className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-md transition active:scale-[0.98] hover:bg-blue-700 sm:hidden">
+                    <Files size={16} />
+                    View All Past Papers
                     <ArrowRight size={15} />
                 </Link>
             </div>
@@ -190,4 +161,4 @@ const LatestResources = ({
     );
 };
 
-export default LatestResources;
+export default PastPapers;
