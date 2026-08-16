@@ -187,6 +187,121 @@ export const updateMcq = async (req, id) => {
     }
 }
 
+export const getAllReadMcqs = async () => {
+    try {
+        await connect()
+
+        const Mcqs = await mcqs
+            .find({
+                $or: [
+                    {
+                        mcqType: {
+                            $in: ["read", "both"]
+                        }
+                    },
+                    {
+                        mcqType: {
+                            $exists: false
+                        }
+                    }
+                ]
+            })
+            .populate("event", "name")
+            .populate("subject", "name")
+            .populate(
+                "chapter",
+                "chapterName chapterNumber"
+            )
+            .populate(
+                "topic",
+                "topicName topicNumber"
+            )
+            .sort({
+                createdAt: -1
+            })
+
+        if (!Mcqs || Mcqs.length === 0) {
+            return NextResponse.json({
+                success: false,
+                message: "No reading MCQs are found",
+                mcqs: []
+            }, { status: 404 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Reading MCQs are found",
+            mcqs: Mcqs
+        }, { status: 200 })
+    } catch (error) {
+        console.log(error)
+
+        return NextResponse.json({
+            success: false,
+            message: "Something went wrong"
+        }, { status: 500 })
+    }
+}
+
+export const getAllTestMcqs = async () => {
+    try {
+        await connect()
+
+        const Mcqs = await mcqs
+            .find({
+                $or: [
+                    {
+                        mcqType: {
+                            $in: ["test", "both"]
+                        }
+                    },
+                    {
+                        mcqType: {
+                            $exists: false
+                        }
+                    }
+                ]
+            })
+            .select(
+                "-options.isCorrect -explanation"
+            )
+            .populate("event", "name")
+            .populate("subject", "name")
+            .populate(
+                "chapter",
+                "chapterName chapterNumber"
+            )
+            .populate(
+                "topic",
+                "topicName topicNumber"
+            )
+            .sort({
+                createdAt: -1
+            })
+
+        if (!Mcqs || Mcqs.length === 0) {
+            return NextResponse.json({
+                success: false,
+                message: "No test MCQs are found",
+                mcqs: []
+            }, { status: 404 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Test MCQs are found",
+            mcqs: Mcqs
+        }, { status: 200 })
+    } catch (error) {
+        console.log(error)
+
+        return NextResponse.json({
+            success: false,
+            message: "Something went wrong"
+        }, { status: 500 })
+    }
+}
+
 export const getMcq = async (req, id) => {
     try {
         await connect()
