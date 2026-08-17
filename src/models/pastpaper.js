@@ -1,184 +1,67 @@
 import mongoose from "mongoose"
 
-const optionSchema = new mongoose.Schema(
-    {
-        label: {
-            type: String,
-            required: true,
-            trim: true,
-            uppercase: true
-        },
-        text: {
-            type: String,
-            required: true,
-            trim: true
-        }
+const pastpaperSchema = new mongoose.Schema({
+    event: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "Event"
     },
-    {
-        _id: false
-    }
-)
-
-const questionSchema = new mongoose.Schema(
-    {
-        questionNumber: {
+    name: {
+        type: String,
+        trim: true
+    },
+    year: {
+        type: Number,
+        required: true
+    },
+    instruction: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    section: {
+        type: String,
+        trim: true,
+    },
+    mcq: [{
+        sr_number: {
             type: Number,
-            required: true,
-            min: 1
-        },
-        type: {
-            type: String,
-            enum: ["mcq", "short", "long"],
-            required: true,
-            default: "mcq"
+            required: true
         },
         statement: {
             type: String,
             required: true,
             trim: true
         },
-        options: {
-            type: [optionSchema],
-            default: [],
-            validate: {
-                validator: function (options) {
-                    if (this.type !== "mcq") {
-                        return true
-                    }
-
-                    return options.length >= 2
-                },
-                message: "MCQ questions must contain at least two options"
-            }
-        },
-        marks: {
-            type: Number,
-            min: 0,
-            default: 1
-        },
-        image: {
-            public_id: {
+        options: [{
+            option_number: {
                 type: String,
-                trim: true,
-                default: ""
+                required: true,
+                trim: true
             },
-            url: {
+            option_text: {
                 type: String,
                 trim: true,
-                default: ""
+                required: true
             }
-        }
-    },
-    {
-        _id: true
-    }
-)
-
-const sectionSchema = new mongoose.Schema(
-    {
-        title: {
+        }],
+        correctOption: {
             type: String,
-            trim: true,
-            default: ""
-        },
-        instructions: {
-            type: String,
-            trim: true,
-            default: ""
-        },
-        questions: {
-            type: [questionSchema],
-            required: true,
-            validate: {
-                validator: (questions) => questions.length > 0,
-                message: "Every section must contain at least one question"
-            }
+            required: true
         }
-    },
-    {
-        _id: true
-    }
-)
-
-const pastPaperSchema = new mongoose.Schema(
-    {
-        event: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Event",
+    }],
+    detailQuestions: [{
+        sr_number: {
+            type: Number,
             required: true
         },
-        title: {
+        statement: {
             type: String,
             required: true,
             trim: true
-        },
-        year: {
-            type: Number,
-            required: true,
-            min: 1900,
-            max: new Date().getFullYear()
-        },
-        paperCode: {
-            type: String,
-            trim: true,
-            uppercase: true,
-            default: ""
-        },
-        duration: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        totalMarks: {
-            type: Number,
-            required: true,
-            min: 1
-        },
-        instructions: {
-            type: [
-                {
-                    type: String,
-                    trim: true
-                }
-            ],
-            default: []
-        },
-        sections: {
-            type: [sectionSchema],
-            required: true,
-            validate: {
-                validator: (sections) => sections.length > 0,
-                message: "At least one paper section is required"
-            }
-        },
-        creationMethod: {
-            type: String,
-            enum: ["manual", "ocr"],
-            default: "manual"
-        },
-        status: {
-            type: String,
-            enum: ["draft", "published"],
-            default: "draft"
-        },
-        publishedAt: {
-            type: Date,
-            default: null
         }
-    },
-    {
-        timestamps: true
-    }
-)
+    }]
+}, { timestamps: true })
 
-pastPaperSchema.index({
-    event: 1,
-    year: -1,
-    status: 1
-})
-
-const pastPaper =
-    mongoose.models.PastPaper ||
-    mongoose.model("PastPaper", pastPaperSchema)
-
-export default pastPaper
+const pastpaper = mongoose.models.Pastpaper || mongoose.model("Pastpaper", pastpaperSchema)
+export default pastpaper
