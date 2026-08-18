@@ -17,6 +17,7 @@ import {
     Plus,
     Save,
     Settings2,
+    Table2,
     Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -59,6 +60,7 @@ const CreateTopic = () => {
                 text: "",
             },
         ],
+        tables: [],
     });
 
     const getEvents = async () => {
@@ -279,6 +281,270 @@ const CreateTopic = () => {
         }));
     };
 
+    const addTable = () => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: [
+                ...previous.tables,
+                {
+                    tableName: "",
+                    columns: [
+                        "",
+                        "",
+                    ],
+                    rows: [
+                        [
+                            "",
+                            "",
+                        ],
+                    ],
+                },
+            ],
+        }));
+    };
+
+    const removeTable = (tableIndex) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.filter(
+                (_, index) =>
+                    index !== tableIndex,
+            ),
+        }));
+    };
+
+    const updateTableName = (
+        tableIndex,
+        value,
+    ) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) =>
+                    index === tableIndex
+                        ? {
+                            ...table,
+                            tableName: value,
+                        }
+                        : table,
+            ),
+        }));
+    };
+
+    const updateColumn = (
+        tableIndex,
+        columnIndex,
+        value,
+    ) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        columns:
+                            table.columns.map(
+                                (
+                                    column,
+                                    currentIndex,
+                                ) =>
+                                    currentIndex ===
+                                        columnIndex
+                                        ? value
+                                        : column,
+                            ),
+                    };
+                },
+            ),
+        }));
+    };
+
+    const addColumn = (tableIndex) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        columns: [
+                            ...table.columns,
+                            "",
+                        ],
+                        rows:
+                            table.rows.map(
+                                (row) => [
+                                    ...row,
+                                    "",
+                                ],
+                            ),
+                    };
+                },
+            ),
+        }));
+    };
+
+    const removeColumn = (
+        tableIndex,
+        columnIndex,
+    ) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    if (
+                        table.columns.length <=
+                        1
+                    ) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        columns:
+                            table.columns.filter(
+                                (
+                                    _,
+                                    currentIndex,
+                                ) =>
+                                    currentIndex !==
+                                    columnIndex,
+                            ),
+                        rows:
+                            table.rows.map(
+                                (row) =>
+                                    row.filter(
+                                        (
+                                            _,
+                                            currentIndex,
+                                        ) =>
+                                            currentIndex !==
+                                            columnIndex,
+                                    ),
+                            ),
+                    };
+                },
+            ),
+        }));
+    };
+
+    const addRow = (tableIndex) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        rows: [
+                            ...table.rows,
+                            table.columns.map(
+                                () => "",
+                            ),
+                        ],
+                    };
+                },
+            ),
+        }));
+    };
+
+    const removeRow = (
+        tableIndex,
+        rowIndex,
+    ) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    if (table.rows.length <= 1) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        rows: table.rows.filter(
+                            (
+                                _,
+                                currentIndex,
+                            ) =>
+                                currentIndex !==
+                                rowIndex,
+                        ),
+                    };
+                },
+            ),
+        }));
+    };
+
+    const updateCell = (
+        tableIndex,
+        rowIndex,
+        columnIndex,
+        value,
+    ) => {
+        setData((previous) => ({
+            ...previous,
+
+            tables: previous.tables.map(
+                (table, index) => {
+                    if (index !== tableIndex) {
+                        return table;
+                    }
+
+                    return {
+                        ...table,
+                        rows:
+                            table.rows.map(
+                                (
+                                    row,
+                                    currentRowIndex,
+                                ) =>
+                                    currentRowIndex ===
+                                        rowIndex
+                                        ? row.map(
+                                            (
+                                                cell,
+                                                currentColumnIndex,
+                                            ) =>
+                                                currentColumnIndex ===
+                                                    columnIndex
+                                                    ? value
+                                                    : cell,
+                                        )
+                                        : row,
+                            ),
+                    };
+                },
+            ),
+        }));
+    };
+
     const createTopic = async (e) => {
         e.preventDefault();
 
@@ -358,6 +624,34 @@ const CreateTopic = () => {
             return;
         }
 
+        const incompleteTable =
+            data.tables.some(
+                (table) =>
+                    !table.tableName.trim() ||
+                    table.columns.some(
+                        (column) =>
+                            !column.trim(),
+                    ) ||
+                    table.rows.some(
+                        (row) =>
+                            row.some(
+                                (cell) =>
+                                    !cell.trim(),
+                            ),
+                    ),
+            );
+
+        if (incompleteTable) {
+            toast.error(
+                "Complete every table field before creating the topic",
+                {
+                    autoClose: 3000,
+                },
+            );
+
+            return;
+        }
+
         try {
             setCreating(true);
 
@@ -374,6 +668,28 @@ const CreateTopic = () => {
                         subHeading:
                             section.subHeading.trim(),
                         text: section.text.trim(),
+                    }),
+                ),
+
+                tables: data.tables.map(
+                    (table) => ({
+                        tableName:
+                            table.tableName.trim(),
+
+                        columns:
+                            table.columns.map(
+                                (column) =>
+                                    column.trim(),
+                            ),
+
+                        rows:
+                            table.rows.map(
+                                (row) =>
+                                    row.map(
+                                        (cell) =>
+                                            cell.trim(),
+                                    ),
+                            ),
                     }),
                 ),
             };
@@ -473,7 +789,8 @@ const CreateTopic = () => {
                         Select the event, subject and
                         chapter first. Then enter the
                         topic information and add as many
-                        content sections as required.
+                        content sections and tables as
+                        required.
                     </p>
                 </section>
 
@@ -581,6 +898,24 @@ const CreateTopic = () => {
                                     You can add or remove
                                     subheadings according to
                                     the topic content.
+                                </p>
+                            </div>
+
+                            <div className="mt-3 rounded-xl bg-white/10 p-4">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-blue-200">
+                                    Topic tables
+                                </p>
+
+                                <p className="mt-2 text-2xl font-extrabold text-white">
+                                    {
+                                        data.tables
+                                            .length
+                                    }
+                                </p>
+
+                                <p className="mt-1 text-[10px] leading-4 text-blue-100">
+                                    Add tables when the topic
+                                    needs structured information.
                                 </p>
                             </div>
 
@@ -973,11 +1308,397 @@ const CreateTopic = () => {
                             </div>
                         </section>
 
+                        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                        <Table2
+                                            size={18}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-blue-600">
+                                            Step 04
+                                        </p>
+
+                                        <h2 className="mt-0.5 text-base font-extrabold text-[#071a4a]">
+                                            Topic tables
+                                        </h2>
+
+                                        <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">
+                                            Add structured tables
+                                            when the topic needs
+                                            them.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={addTable}
+                                    disabled={creating}
+                                    className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                >
+                                    <Plus size={14} />
+                                    Add Table
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 bg-slate-50/70 p-4 sm:p-5">
+                                {data.tables.length ===
+                                    0 ? (
+                                    <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
+                                        <Table2
+                                            size={28}
+                                            className="mx-auto text-slate-300"
+                                        />
+
+                                        <p className="mt-3 text-xs font-bold text-slate-600">
+                                            No tables added
+                                        </p>
+
+                                        <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                                            Tables are optional.
+                                            Add one when the
+                                            topic requires
+                                            structured data.
+                                        </p>
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                addTable
+                                            }
+                                            disabled={
+                                                creating
+                                            }
+                                            className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[10px] font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <Plus
+                                                size={
+                                                    14
+                                                }
+                                            />
+                                            Add First Table
+                                        </button>
+                                    </div>
+                                ) : (
+                                    data.tables.map(
+                                        (
+                                            table,
+                                            tableIndex,
+                                        ) => (
+                                            <div
+                                                key={
+                                                    tableIndex
+                                                }
+                                                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                                            >
+                                                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="flex h-7 min-w-7 items-center justify-center rounded-lg bg-blue-600 px-2 text-[10px] font-bold text-white">
+                                                            {tableIndex +
+                                                                1}
+                                                        </span>
+
+                                                        <p className="text-xs font-extrabold text-[#071a4a]">
+                                                            Table{" "}
+                                                            {tableIndex +
+                                                                1}
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeTable(
+                                                                tableIndex,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            creating
+                                                        }
+                                                        aria-label={`Remove table ${tableIndex + 1}`}
+                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                                                    >
+                                                        <Trash2
+                                                            size={
+                                                                15
+                                                            }
+                                                        />
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-4 p-4">
+                                                    <div>
+                                                        <label
+                                                            htmlFor={`tableName-${tableIndex}`}
+                                                            className="mb-2 block text-[11px] font-bold text-slate-700"
+                                                        >
+                                                            Table name
+                                                        </label>
+
+                                                        <input
+                                                            id={`tableName-${tableIndex}`}
+                                                            type="text"
+                                                            value={
+                                                                table.tableName
+                                                            }
+                                                            onChange={(
+                                                                e,
+                                                            ) =>
+                                                                updateTableName(
+                                                                    tableIndex,
+                                                                    e
+                                                                        .target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                creating
+                                                            }
+                                                            placeholder="For example: Important Vocabulary"
+                                                            required
+                                                            className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="mb-2 flex items-center justify-between gap-3">
+                                                            <p className="text-[11px] font-bold text-slate-700">
+                                                                Table columns
+                                                            </p>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    addColumn(
+                                                                        tableIndex,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    creating
+                                                                }
+                                                                className="flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 text-[9px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            >
+                                                                <Plus
+                                                                    size={
+                                                                        12
+                                                                    }
+                                                                />
+                                                                Column
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            {table.columns.map(
+                                                                (
+                                                                    column,
+                                                                    columnIndex,
+                                                                ) => (
+                                                                    <div
+                                                                        key={
+                                                                            columnIndex
+                                                                        }
+                                                                        className="flex items-center gap-2"
+                                                                    >
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                column
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateColumn(
+                                                                                    tableIndex,
+                                                                                    columnIndex,
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                creating
+                                                                            }
+                                                                            placeholder={`Column ${columnIndex + 1}`}
+                                                                            required
+                                                                            className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                                        />
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                removeColumn(
+                                                                                    tableIndex,
+                                                                                    columnIndex,
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                creating ||
+                                                                                table.columns.length <=
+                                                                                1
+                                                                            }
+                                                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                                                                        >
+                                                                            <Trash2
+                                                                                size={
+                                                                                    14
+                                                                                }
+                                                                            />
+                                                                        </button>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="mb-2 flex items-center justify-between gap-3">
+                                                            <p className="text-[11px] font-bold text-slate-700">
+                                                                Table rows
+                                                            </p>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    addRow(
+                                                                        tableIndex,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    creating
+                                                                }
+                                                                className="flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 text-[9px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            >
+                                                                <Plus
+                                                                    size={
+                                                                        12
+                                                                    }
+                                                                />
+                                                                Row
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                                            <table className="min-w-full border-collapse">
+                                                                <thead>
+                                                                    <tr className="bg-slate-50">
+                                                                        {table.columns.map(
+                                                                            (
+                                                                                column,
+                                                                                columnIndex,
+                                                                            ) => (
+                                                                                <th
+                                                                                    key={
+                                                                                        columnIndex
+                                                                                    }
+                                                                                    className="border-b border-slate-200 px-3 py-2 text-left text-[9px] font-extrabold uppercase tracking-wide text-slate-500"
+                                                                                >
+                                                                                    {column ||
+                                                                                        `Column ${columnIndex + 1}`}
+                                                                                </th>
+                                                                            ),
+                                                                        )}
+
+                                                                        <th className="w-10 border-b border-slate-200" />
+                                                                    </tr>
+                                                                </thead>
+
+                                                                <tbody>
+                                                                    {table.rows.map(
+                                                                        (
+                                                                            row,
+                                                                            rowIndex,
+                                                                        ) => (
+                                                                            <tr
+                                                                                key={
+                                                                                    rowIndex
+                                                                                }
+                                                                            >
+                                                                                {row.map(
+                                                                                    (
+                                                                                        cell,
+                                                                                        columnIndex,
+                                                                                    ) => (
+                                                                                        <td
+                                                                                            key={
+                                                                                                columnIndex
+                                                                                            }
+                                                                                            className="border-b border-slate-100 p-2"
+                                                                                        >
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                value={
+                                                                                                    cell
+                                                                                                }
+                                                                                                onChange={(
+                                                                                                    e,
+                                                                                                ) =>
+                                                                                                    updateCell(
+                                                                                                        tableIndex,
+                                                                                                        rowIndex,
+                                                                                                        columnIndex,
+                                                                                                        e
+                                                                                                            .target
+                                                                                                            .value,
+                                                                                                    )
+                                                                                                }
+                                                                                                disabled={
+                                                                                                    creating
+                                                                                                }
+                                                                                                placeholder="Enter value"
+                                                                                                required
+                                                                                                className="h-9 w-full min-w-[130px] rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                                                            />
+                                                                                        </td>
+                                                                                    ),
+                                                                                )}
+
+                                                                                <td className="border-b border-slate-100 p-2">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            removeRow(
+                                                                                                tableIndex,
+                                                                                                rowIndex,
+                                                                                            )
+                                                                                        }
+                                                                                        disabled={
+                                                                                            creating ||
+                                                                                            table.rows.length <=
+                                                                                            1
+                                                                                        }
+                                                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                                                                                    >
+                                                                                        <Trash2
+                                                                                            size={
+                                                                                                13
+                                                                                            }
+                                                                                        />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ),
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ),
+                                    )
+                                )}
+                            </div>
+                        </section>
+
                         <section className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
                             <p className="text-[10px] leading-4 text-slate-500 sm:max-w-sm">
-                                Review the hierarchy and all
-                                sections before creating the
-                                topic.
+                                Review the hierarchy,
+                                sections and tables before
+                                creating the topic.
                             </p>
 
                             <div className="flex flex-col-reverse gap-3 sm:flex-row">

@@ -17,6 +17,7 @@ import {
     Settings2,
     SlidersHorizontal,
     X,
+    Pencil,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -107,18 +108,15 @@ const Topics = () => {
 
             setTopics([]);
 
-            setErrorMessage(
+            const message =
                 error.response?.data?.message ||
-                "Topics could not be loaded",
-            );
+                "Topics could not be loaded";
 
-            toast.error(
-                error.response?.data?.message ||
-                "Topics could not be loaded",
-                {
-                    autoClose: 3000,
-                },
-            );
+            setErrorMessage(message);
+
+            toast.error(message, {
+                autoClose: 3000,
+            });
         } finally {
             setLoading(false);
         }
@@ -344,6 +342,15 @@ const Topics = () => {
                     currentChapter?.chapterNumber,
                     currentSubject?.name,
                     currentEvent?.name,
+
+                    ...(Array.isArray(topic.tables)
+                        ? topic.tables.flatMap((table) => [
+                            table?.title,
+                            ...(Array.isArray(table?.headers)
+                                ? table.headers
+                                : []),
+                        ])
+                        : []),
                 ]
                     .filter(Boolean)
                     .join(" ")
@@ -540,8 +547,8 @@ const Topics = () => {
 
                                 <p className="mt-0.5 text-[9px] text-slate-500 sm:text-[10px]">
                                     Open a topic to update its
-                                    information, sections or
-                                    image.
+                                    information, sections,
+                                    tables or image.
                                 </p>
                             </div>
                         </div>
@@ -612,65 +619,90 @@ const TopicCard = ({
     event,
 }) => {
     const sectionCount =
-        topic.sections?.length || 0;
+        Array.isArray(topic.sections)
+            ? topic.sections.length
+            : 0;
+
+    const tables = Array.isArray(topic.tables)
+        ? topic.tables
+        : [];
+
+    const tableCount = tables.length;
 
     return (
-        <Link
-            href={`/admin/topics/${topic._id}`}
-            className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-        >
-            <div className="relative h-24 overflow-hidden bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 sm:h-28 lg:h-32">
-                {topic.image?.url ? (
-                    <img
-                        src={topic.image.url}
-                        alt={topic.topicName}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
-                ) : (
-                    <div className="flex h-full items-center justify-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-sm sm:h-12 sm:w-12">
-                            <BookOpenText
-                                size={22}
-                                strokeWidth={1.7}
-                            />
+        <div className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+            <Link
+                href={`/admin/topics/${topic._id}`}
+                className="block"
+            >
+                <div className="relative h-24 overflow-hidden bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 sm:h-28 lg:h-32">
+                    {topic.image?.url ? (
+                        <img
+                            src={topic.image.url}
+                            alt={topic.topicName}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                    ) : (
+                        <div className="flex h-full items-center justify-center">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-sm sm:h-12 sm:w-12">
+                                <BookOpenText
+                                    size={22}
+                                    strokeWidth={1.7}
+                                />
+                            </div>
                         </div>
+                    )}
+
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#071a4a]/40 to-transparent" />
+
+                    <div className="absolute left-2 top-2 rounded-lg bg-[#071a4a]/90 px-2 py-1 text-[8px] font-extrabold text-white shadow-sm backdrop-blur-sm sm:text-[9px]">
+                        Topic {topic.topicNumber}
                     </div>
-                )}
 
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#071a4a]/40 to-transparent" />
-
-                <div className="absolute left-2 top-2 rounded-lg bg-[#071a4a]/90 px-2 py-1 text-[8px] font-extrabold text-white shadow-sm backdrop-blur-sm sm:text-[9px]">
-                    Topic {topic.topicNumber}
+                    {tableCount > 0 && (
+                        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-[8px] font-extrabold text-blue-700 shadow-sm backdrop-blur-sm sm:text-[9px]">
+                            <Layers3 size={11} />
+                            {tableCount}{" "}
+                            {tableCount === 1
+                                ? "Table"
+                                : "Tables"}
+                        </div>
+                    )}
                 </div>
-            </div>
+            </Link>
 
             <div className="flex flex-1 flex-col p-3 sm:p-3.5">
-                <p className="truncate text-[7px] font-bold uppercase tracking-[0.11em] text-blue-600 sm:text-[8px]">
-                    {subject?.name || "Subject"}
-                </p>
+                <Link
+                    href={`/admin/topics/${topic._id}`}
+                    className="block"
+                >
+                    <p className="truncate text-[7px] font-bold uppercase tracking-[0.11em] text-blue-600 sm:text-[8px]">
+                        {subject?.name || "Subject"}
+                    </p>
 
-                <h3 className="mt-1 line-clamp-2 text-xs font-black leading-4 text-[#071a4a] sm:text-sm sm:leading-5">
-                    {topic.topicName}
-                </h3>
+                    <h3 className="mt-1 line-clamp-2 text-xs font-black leading-4 text-[#071a4a] sm:text-sm sm:leading-5">
+                        {topic.topicName}
+                    </h3>
 
-                <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2.5">
-                    <InfoLine
-                        label="Event"
-                        value={
-                            event?.name ||
-                            "Not available"
-                        }
-                    />
+                    <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2.5">
+                        <InfoLine
+                            label="Event"
+                            value={
+                                event?.name ||
+                                "Not available"
+                            }
+                        />
 
-                    <InfoLine
-                        label="Chapter"
-                        value={
-                            chapter
-                                ? `${chapter.chapterNumber}. ${chapter.chapterName}`
-                                : "Not available"
-                        }
-                    />
-                </div>
+                        <InfoLine
+                            label="Chapter"
+                            value={
+                                chapter
+                                    ? `${chapter.chapterNumber}. ${chapter.chapterName}`
+                                    : "Not available"
+                            }
+                        />
+                    </div>
+                </Link>
 
                 <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
                     <div className="flex min-w-0 items-center gap-1.5 text-[8px] font-semibold text-slate-500 sm:text-[9px]">
@@ -687,12 +719,55 @@ const TopicCard = ({
                         </span>
                     </div>
 
-                    <span className="text-[8px] font-bold text-blue-600 transition group-hover:translate-x-0.5 sm:text-[9px]">
+                    <Link
+                        href={`/admin/topics/${topic._id}`}
+                        className="text-[8px] font-bold text-blue-600 transition hover:translate-x-0.5 sm:text-[9px]"
+                    >
                         Manage
-                    </span>
+                    </Link>
                 </div>
+
+                {tableCount > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                        {tables.map((table, index) => {
+                            const tableTitle =
+                                table?.title?.trim() ||
+                                `Table ${index + 1}`;
+
+                            return (
+                                <Link
+                                    key={
+                                        table?._id ||
+                                        `table-${index}`
+                                    }
+                                    href={`/admin/topics/${topic._id}?edit=table&table=${index}`}
+                                    onClick={(event) =>
+                                        event.stopPropagation()
+                                    }
+                                    className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-blue-100 bg-blue-50/70 px-2.5 py-2 text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                                >
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                        <Layers3
+                                            size={12}
+                                            className="shrink-0"
+                                        />
+
+                                        <span className="truncate text-[8px] font-bold sm:text-[9px]">
+                                            {tableTitle}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center gap-1 text-[8px] font-extrabold sm:text-[9px]">
+                                        <Pencil size={11} />
+                                        Edit
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
-        </Link>
+        </div>
     );
 };
 
@@ -771,6 +846,8 @@ const TopicsLoading = () => {
                         </div>
 
                         <div className="mt-3 h-8 rounded-lg bg-slate-100" />
+
+                        <div className="mt-2 h-8 rounded-lg bg-slate-100" />
                     </div>
                 </div>
             ))}
