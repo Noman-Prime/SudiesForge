@@ -83,7 +83,8 @@ export const getAllPastpaper = async () => {
         return NextResponse.json({
             success: true,
             message: "Pastpaper  is found",
-            pastpapers: Pastpapers
+            total: Pastpapers.length,
+            pastpapers: Pastpapers,
         }, { status: 200 })
     } catch (error) {
         console.log(error);
